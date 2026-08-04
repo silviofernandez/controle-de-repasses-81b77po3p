@@ -1,58 +1,74 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
-import { AlertCircle, BarChart3 } from 'lucide-react'
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Pie, PieChart, Cell, Legend } from 'recharts'
-import { getFolders, type FolderStatus, type FolderRecord } from '@/services/folders'
+import { Input } from '@/components/ui/input'
+import {
+  AlertCircle,
+  BarChart3,
+  Wallet,
+  ArrowDownCircle,
+  ArrowUpCircle,
+  Building2,
+} from 'lucide-react'
 import { useRealtime } from '@/hooks/use-realtime'
-import { formatCurrency } from '@/lib/format'
-
-const STATUS_COLORS: Record<string, string> = {
-  pendente: 'hsl(var(--chart-1))',
-  transferido: 'hsl(var(--chart-2))',
-  subido: 'hsl(var(--chart-3))',
-  recebido: 'hsl(var(--chart-4))',
-  repassado: 'hsl(var(--chart-5))',
-}
+import { formatCurrency, formatDate } from '@/lib/format'
+import {
+  getGestorReport,
+  getPeriodDates,
+  STATUS_INFO,
+  PERIOD_OPTIONS,
+  type GestorReport,
+  type PeriodType,
+} from '@/services/reports'
+import { cn } from '@/lib/utils'
 
 export default function Reports() {
-  const [folders, setFolders] = useState<FolderRecord[]>([])
+  const [period, setPeriod] = useState<PeriodType>('mes')
+  const [customStart, setCustomStart] = useState('')
+  const [customEnd, setCustomEnd] = useState('')
+  const [report, setReport] = useState<GestorReport | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
+    const { start, end } = getPeriodDates(period, customStart, customEnd)
+    if (!start || !end) {
+      setReport(null)
+      setLoading(false)
+      return
+    }
     try {
-      const data = await getFolders()
-      setFolders(data)
+      const data = await getGestorReport(start, end)
+      setReport(data)
       setError(false)
     } catch {
       setError(true)
     } finally {
       setLoading(false)
     }
-  }
+  }, [period, customStart, customEnd])
 
   useEffect(() => {
     loadData()
-  }, [])
+  }, [loadData])
 
   useRealtime('folders', () => loadData())
 
-  if (loading) {
+  if (loading)
     return (
       <div className="space-y-6">
         <Skeleton className="h-8 w-32" />
-        <div className="grid gap-4 lg:grid-cols-2">
-          <Skeleton className="h-72" />
-          <Skeleton className="h-72" />
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {[...Array(4)].map((_, i) => (
+            <Skeleton key={i} className="h-28" />
+          ))}
         </div>
+        <Skeleton className="h-64" />
       </div>
     )
-  }
 
-  if (error) {
+  if (error)
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-20">
         <AlertCircle className="h-12 w-12 text-muted-foreground" />
@@ -60,33 +76,34 @@ export default function Reports() {
         <Button onClick={loadData}>Tentar novamente</Button>
       </div>
     )
-  }
 
-  const statuses: FolderStatus[] = ['pendente', 'transferido', 'subido', 'recebido', 'repassado']
-  const statusData = statuses.map((status) => ({
-    name: status,
-    count: folders.filter((f) => f.status === status).length,
-    fill: STATUS_COLORS[status],
-  }))
-
-  const investorMap = new Map<string, { name: string; total: number; count: number }>()
-  folders.forEach((f) => {
-    const name = f.expand?.investor_id?.name || 'N/A'
-    const existing = investorMap.get(name) || { name, total: 0, count: 0 }
-    existing.total += f.rent_amount || 0
-    existing.count += 1
-    investorMap.set(name, existing)
-  })
-  const investorData = Array.from(investorMap.values()).map((item) => ({
-    name: item.name,
-    total: item.total,
-    count: item.count,
-  }))
-
-  const chartConfig = {
-    count: { label: 'Quantidade' },
-    total: { label: 'Total (R$)' },
-  }
+  const ind = report?.indicators
+  const indicators = [
+    {
+      label: 'Pago aos Proprietários',
+      value: ind?.total_paid_to_owners || 0,
+      icon: ArrowUpCircle,
+      color: 'text-blue-600',
+    },
+    {
+      label: 'Recebido das Seguradoras',
+      value: ind?.total_received_from_insurers || 0,
+      icon: ArrowDownCircle,
+      color: 'text-green-600',
+    },
+    {
+      label: 'Destinado aos Investidores',
+      value: ind?.total_investor_share || 0,
+      icon: Wallet,
+      color: 'text-purple-600',
+    },
+    {
+      label: 'Destinado à Empresa',
+      value: ind?.total_company_share || 0,
+      icon: Building2,
+      color: 'text-orange-600',
+    },
+  ]
 
   return (
     <div className="space-y-6">
@@ -95,73 +112,99 @@ export default function Reports() {
         <h1 className="text-2xl font-bold">Relatórios</h1>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Pastas por Status</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ChartContainer config={chartConfig} className="h-[300px]">
-              <PieChart>
-                <Pie
-                  data={statusData}
-                  dataKey="count"
-                  nameKey="name"
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={100}
-                >
-                  {statusData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.fill} />
-                  ))}
-                </Pie>
-                <ChartTooltip content={<ChartTooltipContent />} />
-                <Legend />
-              </PieChart>
-            </ChartContainer>
-          </CardContent>
-        </Card>
+      <div className="flex flex-wrap items-center gap-2">
+        {PERIOD_OPTIONS.map((opt) => (
+          <Button
+            key={opt.value}
+            variant={period === opt.value ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setPeriod(opt.value)}
+          >
+            {opt.label}
+          </Button>
+        ))}
+        {period === 'personalizado' && (
+          <div className="flex items-center gap-2">
+            <Input
+              type="date"
+              value={customStart}
+              onChange={(e) => setCustomStart(e.target.value)}
+              className="w-40"
+            />
+            <span className="text-muted-foreground">até</span>
+            <Input
+              type="date"
+              value={customEnd}
+              onChange={(e) => setCustomEnd(e.target.value)}
+              className="w-40"
+            />
+          </div>
+        )}
+      </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Valor por Investidor</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ChartContainer config={chartConfig} className="h-[300px]">
-              <BarChart data={investorData}>
-                <CartesianGrid vertical={false} />
-                <XAxis dataKey="name" tickLine={false} axisLine={false} fontSize={12} />
-                <YAxis tickLine={false} axisLine={false} fontSize={12} />
-                <ChartTooltip content={<ChartTooltipContent />} />
-                <Bar dataKey="total" fill="hsl(var(--chart-1))" radius={4} />
-              </BarChart>
-            </ChartContainer>
-          </CardContent>
-        </Card>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {indicators.map((item) => {
+          const Icon = item.icon
+          return (
+            <Card key={item.label}>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-muted-foreground">{item.label}</p>
+                  <Icon className={cn('h-5 w-5', item.color)} />
+                </div>
+                <p className="mt-2 text-xl font-bold">{formatCurrency(item.value)}</p>
+              </CardContent>
+            </Card>
+          )
+        })}
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Resumo Geral</CardTitle>
+          <CardTitle>Pastas em Aberto ({report?.open_folders?.length || 0})</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 sm:grid-cols-3">
-            <div>
-              <p className="text-sm text-muted-foreground">Total de Pastas</p>
-              <p className="text-xl font-bold">{folders.length}</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Valor Total</p>
-              <p className="text-xl font-bold">
-                {formatCurrency(folders.reduce((s, f) => s + (f.rent_amount || 0), 0))}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Total Repassado</p>
-              <p className="text-xl font-bold">
-                {formatCurrency(folders.reduce((s, f) => s + (f.investor_share_amount || 0), 0))}
-              </p>
-            </div>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="border-b bg-muted/50">
+                <tr>
+                  <th className="px-4 py-3 text-left font-medium">Nº da Pasta</th>
+                  <th className="px-4 py-3 text-left font-medium">Proprietário</th>
+                  <th className="px-4 py-3 text-left font-medium">Seguradora</th>
+                  <th className="px-4 py-3 text-left font-medium">Status</th>
+                  <th className="px-4 py-3 text-left font-medium">Vencimento</th>
+                  <th className="px-4 py-3 text-left font-medium">Recebimento Previsto</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(report?.open_folders || []).map((folder) => (
+                  <tr key={folder.id} className="border-b last:border-0 hover:bg-muted/50">
+                    <td className="px-4 py-3 font-medium">{folder.contract_number}</td>
+                    <td className="px-4 py-3">{folder.owner_name || '-'}</td>
+                    <td className="px-4 py-3">{folder.insurer_name || '-'}</td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={cn(
+                          'rounded-full px-2 py-1 text-xs font-medium',
+                          STATUS_INFO[folder.status]?.className || 'bg-gray-100 text-gray-800',
+                        )}
+                      >
+                        {STATUS_INFO[folder.status]?.label || folder.status}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">{formatDate(folder.due_date)}</td>
+                    <td className="px-4 py-3">{formatDate(folder.estimated_receipt_date)}</td>
+                  </tr>
+                ))}
+                {(report?.open_folders?.length || 0) === 0 && (
+                  <tr>
+                    <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
+                      Nenhuma pasta em aberto no período selecionado.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
         </CardContent>
       </Card>

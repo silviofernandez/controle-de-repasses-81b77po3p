@@ -30,7 +30,7 @@ const navItems: NavItem[] = [
   { to: '/payments', label: 'Repasses', icon: Wallet },
   { to: '/insurer-submissions', label: 'Envios à Seguradora', icon: Send, roles: ['gestor'] },
   { to: '/relationships', label: 'Relacionamentos', icon: Users },
-  { to: '/reports', label: 'Relatórios', icon: BarChart3 },
+  { to: '/reports', label: 'Relatórios', icon: BarChart3, roles: ['gestor'] },
   { to: '/settings', label: 'Configurações', icon: Settings },
 ]
 

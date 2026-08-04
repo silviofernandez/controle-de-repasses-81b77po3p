@@ -43,7 +43,14 @@ export default function App() {
               }
             />
             <Route path="/relationships" element={<Relationships />} />
-            <Route path="/reports" element={<Reports />} />
+            <Route
+              path="/reports"
+              element={
+                <ProtectedRoute allowedRoles={['gestor']}>
+                  <Reports />
+                </ProtectedRoute>
+              }
+            />
             <Route path="/settings" element={<Settings />} />
             <Route path="/investor" element={<InvestorDashboard />} />
           </Route>
