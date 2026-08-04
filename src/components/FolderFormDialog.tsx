@@ -94,11 +94,11 @@ export function FolderFormDialog({ open, onOpenChange, folder, onSaved }: Folder
         owner_transfer_date: folder.owner_transfer_date || '',
         insurer_submission_date: folder.insurer_submission_date || '',
         estimated_receipt_date: folder.estimated_receipt_date || '',
-        actual_receipt_date: folder.actual_receipt_date || '',
+        actual_receipt_date: '',
         repassed_date: folder.repassed_date || '',
         rent_amount: folder.rent_amount?.toString() || '',
         investor_share_amount: folder.investor_share_amount?.toString() || '',
-        received_amount: folder.received_amount?.toString() || '',
+        received_amount: '',
         status: folder.status || 'pendente',
         notes: folder.notes || '',
       })
@@ -265,7 +265,7 @@ export function FolderFormDialog({ open, onOpenChange, folder, onSaved }: Folder
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="initial_date">Data Inicial</Label>
+              <Label htmlFor="initial_date">Data do Vencimento</Label>
               <Input
                 id="initial_date"
                 type="date"
@@ -275,14 +275,14 @@ export function FolderFormDialog({ open, onOpenChange, folder, onSaved }: Folder
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="due_date">Data de Vencimento</Label>
+              <Label htmlFor="due_date">Data do Repasse</Label>
               <Input
                 id="due_date"
                 type="date"
                 value={form.due_date}
                 onChange={(e) => setForm({ ...form, due_date: e.target.value })}
               />
-            </div>
+            </div>{' '}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -293,7 +293,13 @@ export function FolderFormDialog({ open, onOpenChange, folder, onSaved }: Folder
                 type="number"
                 step="0.01"
                 value={form.rent_amount}
-                onChange={(e) => setForm({ ...form, rent_amount: e.target.value })}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    rent_amount: e.target.value,
+                    investor_share_amount: e.target.value,
+                  })
+                }
               />
             </div>
             <div className="space-y-2">
@@ -304,29 +310,6 @@ export function FolderFormDialog({ open, onOpenChange, folder, onSaved }: Folder
                 step="0.01"
                 value={form.investor_share_amount}
                 onChange={(e) => setForm({ ...form, investor_share_amount: e.target.value })}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="received_amount">Valor Recebido (R$)</Label>
-              <Input
-                id="received_amount"
-                type="number"
-                step="0.01"
-                value={form.received_amount}
-                onChange={(e) => setForm({ ...form, received_amount: e.target.value })}
-                placeholder="0,00"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="actual_receipt_date">Data do Recebimento</Label>
-              <Input
-                id="actual_receipt_date"
-                type="date"
-                value={form.actual_receipt_date}
-                onChange={(e) => setForm({ ...form, actual_receipt_date: e.target.value })}
               />
             </div>
           </div>
