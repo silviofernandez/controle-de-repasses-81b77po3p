@@ -10,7 +10,7 @@ migrate(
     for (const fieldName of fieldsToHide) {
       const field = col.fields.getByName(fieldName)
       if (field) {
-        field.hidden = true
+        field.setHidden(true)
       }
     }
     app.save(col)
@@ -26,7 +26,7 @@ migrate(
     for (const fieldName of fieldsToUnhide) {
       const field = col.fields.getByName(fieldName)
       if (field) {
-        field.hidden = false
+        field.setHidden(false)
       }
     }
     app.save(col)

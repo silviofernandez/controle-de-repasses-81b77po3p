@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-04T19:32:11.876Z",
+  "generatedAt": "2026-08-04T19:48:07.464Z",
   "collections": [
     {
       "name": "users",
@@ -339,30 +339,6 @@
           "name": "rent_amount",
           "type": "number",
           "required": true,
-          "system": false
-        },
-        {
-          "name": "surcharge_percent",
-          "type": "number",
-          "required": false,
-          "system": false
-        },
-        {
-          "name": "investor_percent",
-          "type": "number",
-          "required": false,
-          "system": false
-        },
-        {
-          "name": "surcharge_amount",
-          "type": "number",
-          "required": false,
-          "system": false
-        },
-        {
-          "name": "company_share_amount",
-          "type": "number",
-          "required": false,
           "system": false
         },
         {
