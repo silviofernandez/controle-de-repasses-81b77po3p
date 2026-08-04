@@ -15,6 +15,7 @@ export interface FolderRecord extends RecordModel {
   actual_receipt_date: string
   repassed_date: string
   rent_amount: number
+  received_amount: number
   investor_share_amount: number
   status: FolderStatus
   user_id: string

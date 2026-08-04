@@ -1,14 +1,15 @@
 import { useEffect, useState } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useParams, Link } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { ArrowLeft, Pencil, FileText } from 'lucide-react'
+import { ArrowLeft, Pencil, FileText, Wallet } from 'lucide-react'
 import { getFolder, type FolderRecord } from '@/services/folders'
 import { formatCurrency, formatDate } from '@/lib/format'
 import { ErrorState, EmptyState } from '@/components/page-states'
 import { FolderFormDialog } from '@/components/FolderFormDialog'
+import { ReceiptDialog } from '@/components/ReceiptDialog'
 
 const statusLabels: Record<string, string> = {
   pendente: 'Pendente',
@@ -20,11 +21,11 @@ const statusLabels: Record<string, string> = {
 
 export default function FolderDetail() {
   const { id } = useParams<{ id: string }>()
-  const navigate = useNavigate()
   const [folder, setFolder] = useState<FolderRecord | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [receiptOpen, setReceiptOpen] = useState(false)
 
   const loadData = async () => {
     if (!id) return
@@ -86,6 +87,10 @@ export default function FolderDetail() {
     { label: 'Investidor', value: folder.expand?.investor_id?.name || '-' },
     { label: 'Seguradora', value: folder.expand?.insurer_id?.name || '-' },
     { label: 'Valor do Aluguel', value: formatCurrency(folder.rent_amount || 0) },
+    {
+      label: 'Valor Recebido',
+      value: folder.received_amount ? formatCurrency(folder.received_amount) : '-',
+    },
     { label: 'Repasse do Investidor', value: formatCurrency(folder.investor_share_amount || 0) },
     { label: 'Data Inicial', value: formatDate(folder.initial_date) },
     { label: 'Data de Vencimento', value: formatDate(folder.due_date) },
@@ -108,6 +113,11 @@ export default function FolderDetail() {
         <Button variant="outline" size="sm" onClick={() => setDialogOpen(true)}>
           <Pencil className="mr-2 h-4 w-4" /> Editar
         </Button>
+        {folder.status !== 'repassado' && (
+          <Button variant="default" size="sm" onClick={() => setReceiptOpen(true)}>
+            <Wallet className="mr-2 h-4 w-4" /> Registrar Recebimento
+          </Button>
+        )}
       </div>
 
       <div className="flex items-center gap-2">
@@ -142,6 +152,14 @@ export default function FolderDetail() {
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         folder={folder}
+        onSaved={loadData}
+      />
+
+      <ReceiptDialog
+        open={receiptOpen}
+        onOpenChange={setReceiptOpen}
+        folderId={folder.id}
+        rentAmount={folder.rent_amount || 0}
         onSaved={loadData}
       />
     </div>

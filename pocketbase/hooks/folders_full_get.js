@@ -26,6 +26,7 @@ routerAdd(
       actual_receipt_date: record.getString('actual_receipt_date'),
       repassed_date: record.getString('repassed_date'),
       rent_amount: record.get('rent_amount') || 0,
+      received_amount: record.get('received_amount') || 0,
       surcharge_percent: record.get('surcharge_percent') || 0,
       investor_percent: record.get('investor_percent') || 0,
       surcharge_amount: record.get('surcharge_amount') || 0,

@@ -65,6 +65,7 @@ export function FolderFormDialog({ open, onOpenChange, folder, onSaved }: Folder
     repassed_date: '',
     rent_amount: '',
     investor_share_amount: '',
+    received_amount: '',
     status: 'pendente' as FolderStatus,
     notes: '',
   })
@@ -87,6 +88,7 @@ export function FolderFormDialog({ open, onOpenChange, folder, onSaved }: Folder
           repassed_date: folder.repassed_date || '',
           rent_amount: folder.rent_amount?.toString() || '',
           investor_share_amount: folder.investor_share_amount?.toString() || '',
+          received_amount: folder.received_amount?.toString() || '',
           status: folder.status || 'pendente',
           notes: folder.notes || '',
         })
@@ -143,6 +145,7 @@ export function FolderFormDialog({ open, onOpenChange, folder, onSaved }: Folder
       investor_share_amount: form.investor_share_amount
         ? parseFloat(form.investor_share_amount)
         : 0,
+      received_amount: form.received_amount ? parseFloat(form.received_amount) : null,
       status: form.status,
       notes: form.notes,
       user_id: user.id,
@@ -275,6 +278,29 @@ export function FolderFormDialog({ open, onOpenChange, folder, onSaved }: Folder
                 step="0.01"
                 value={form.investor_share_amount}
                 onChange={(e) => setForm({ ...form, investor_share_amount: e.target.value })}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="received_amount">Valor Recebido (R$)</Label>
+              <Input
+                id="received_amount"
+                type="number"
+                step="0.01"
+                value={form.received_amount}
+                onChange={(e) => setForm({ ...form, received_amount: e.target.value })}
+                placeholder="0,00"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="actual_receipt_date">Data do Recebimento</Label>
+              <Input
+                id="actual_receipt_date"
+                type="date"
+                value={form.actual_receipt_date}
+                onChange={(e) => setForm({ ...form, actual_receipt_date: e.target.value })}
               />
             </div>
           </div>
