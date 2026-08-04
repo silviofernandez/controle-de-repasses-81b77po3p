@@ -12,23 +12,33 @@ import {
   LogOut,
   Menu,
   Wallet,
+  Send,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useState } from 'react'
 
-const navItems = [
+interface NavItem {
+  to: string
+  label: string
+  icon: typeof LayoutDashboard
+  roles?: string[]
+}
+
+const navItems: NavItem[] = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/folders', label: 'Pastas', icon: FolderCog },
   { to: '/payments', label: 'Repasses', icon: Wallet },
+  { to: '/insurer-submissions', label: 'Envios à Seguradora', icon: Send, roles: ['gestor'] },
   { to: '/relationships', label: 'Relacionamentos', icon: Users },
   { to: '/reports', label: 'Relatórios', icon: BarChart3 },
   { to: '/settings', label: 'Configurações', icon: Settings },
 ]
 
-function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
+function NavLinks({ onNavigate, userRole }: { onNavigate?: () => void; userRole?: string }) {
+  const visibleItems = navItems.filter((item) => !item.roles || item.roles.includes(userRole || ''))
   return (
     <nav className="flex flex-col gap-1 px-3">
-      {navItems.map((item) => {
+      {visibleItems.map((item) => {
         const Icon = item.icon
         return (
           <NavLink
@@ -72,7 +82,7 @@ export function Layout() {
           <span className="text-lg font-bold">Controle de Repasses</span>
         </div>
         <div className="flex-1 py-4">
-          <NavLinks />
+          <NavLinks userRole={user?.role} />
         </div>
         <div className="border-t p-4">
           <div className="mb-3 truncate text-sm text-muted-foreground">
@@ -104,7 +114,7 @@ export function Layout() {
                 <span className="text-lg font-bold">Repasses</span>
               </div>
               <div className="py-4">
-                <NavLinks onNavigate={() => setMobileOpen(false)} />
+                <NavLinks onNavigate={() => setMobileOpen(false)} userRole={user?.role} />
               </div>
               <div className="border-t p-4">
                 <div className="mb-3 truncate text-sm text-muted-foreground">

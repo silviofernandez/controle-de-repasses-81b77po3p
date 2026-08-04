@@ -13,6 +13,7 @@ import Relationships from '@/pages/Relationships'
 import Reports from '@/pages/Reports'
 import Settings from '@/pages/Settings'
 import InvestorDashboard from '@/pages/InvestorDashboard'
+import InsurerSubmissions from '@/pages/InsurerSubmissions'
 import NotFound from '@/pages/NotFound'
 
 export default function App() {
@@ -33,6 +34,14 @@ export default function App() {
             <Route path="/folders" element={<Folders />} />
             <Route path="/folders/new" element={<FolderNew />} />
             <Route path="/payments" element={<Payments />} />
+            <Route
+              path="/insurer-submissions"
+              element={
+                <ProtectedRoute allowedRoles={['gestor']}>
+                  <InsurerSubmissions />
+                </ProtectedRoute>
+              }
+            />
             <Route path="/relationships" element={<Relationships />} />
             <Route path="/reports" element={<Reports />} />
             <Route path="/settings" element={<Settings />} />
