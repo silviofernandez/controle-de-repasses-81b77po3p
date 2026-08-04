@@ -1,9 +1,10 @@
 import pb from '@/lib/pocketbase/client'
+import type { RecordModel } from 'pocketbase'
 
-export interface Folder {
-  id: string
+export type FolderStatus = 'pendente' | 'transferido' | 'subido' | 'recebido' | 'repassado'
+
+export interface FolderRecord extends RecordModel {
   contract_number: string
-  owner_name: string
   investor_id: string
   insurer_id: string
   initial_date: string
@@ -14,40 +15,46 @@ export interface Folder {
   actual_receipt_date: string
   repassed_date: string
   rent_amount: number
-  surcharge_percent: number
-  investor_percent: number
-  surcharge_amount: number
-  company_share_amount: number
   investor_share_amount: number
-  status: string
+  status: FolderStatus
+  user_id: string
   notes: string
-  created: string
-  updated: string
+  owner_name: string
   expand?: {
-    investor_id?: { id: string; name: string }
+    investor_id?: { id: string; name: string; email: string }
     insurer_id?: { id: string; name: string }
   }
 }
 
-export const getFolders = async (): Promise<Folder[]> => {
-  const res = (await pb.send('/backend/v1/investor-folders', { method: 'GET' })) as {
-    items: Folder[]
-  }
-  return res.items
+export const getFolders = async (): Promise<FolderRecord[]> => {
+  return await pb.collection('folders').getFullList<FolderRecord>({
+    sort: '-created',
+    expand: 'investor_id,insurer_id',
+  })
 }
 
-export const getInvestorFolders = () =>
-  pb.send('/backend/v1/investor-folders', { method: 'GET' }) as Promise<{ items: Folder[] }>
+export const getFolder = async (id: string): Promise<FolderRecord> => {
+  return await pb.collection('folders').getOne<FolderRecord>(id, {
+    expand: 'investor_id,insurer_id',
+  })
+}
 
-export const getFolder = (id: string) =>
-  pb.send(`/backend/v1/folders/${id}`, { method: 'GET' }) as Promise<Folder>
+export const createFolder = async (data: Partial<FolderRecord>) => {
+  return await pb.collection('folders').create<FolderRecord>(data)
+}
 
-export const getFolderFull = (id: string) =>
-  pb.send(`/backend/v1/folders/${id}/full`, { method: 'GET' }) as Promise<Folder>
+export const updateFolder = async (id: string, data: Partial<FolderRecord>) => {
+  return await pb.collection('folders').update<FolderRecord>(id, data)
+}
 
-export const createFolder = (data: Record<string, any>) => pb.collection('folders').create(data)
+export const deleteFolder = async (id: string) => {
+  await pb.collection('folders').delete(id)
+}
 
-export const updateFolder = (id: string, data: Record<string, any>) =>
-  pb.collection('folders').update(id, data)
-
-export const deleteFolder = (id: string) => pb.collection('folders').delete(id)
+export const getFoldersByStatus = async (status: FolderStatus): Promise<FolderRecord[]> => {
+  return await pb.collection('folders').getFullList<FolderRecord>({
+    filter: `status = "${status}"`,
+    sort: '-created',
+    expand: 'investor_id,insurer_id',
+  })
+}

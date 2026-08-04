@@ -1,114 +1,91 @@
 import { useState } from 'react'
-import { useNavigate, Navigate } from 'react-router-dom'
-import { Building2, Loader2 } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { useNavigate } from 'react-router-dom'
+import { useAuth } from '@/hooks/use-auth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { useAuth } from '@/hooks/use-auth'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { FileText, Loader2 } from 'lucide-react'
 
 export default function Login() {
+  const { signIn, signUp } = useAuth()
   const navigate = useNavigate()
-  const { signIn, isAuthenticated, role, loading: authLoading } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
+  const [isSignUp, setIsSignUp] = useState(false)
   const [error, setError] = useState('')
-
-  if (authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
-      </div>
-    )
-  }
-
-  if (isAuthenticated && role) {
-    return <Navigate to={role === 'gestor' ? '/dashboard' : '/investor-dashboard'} replace />
-  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setLoading(true)
     setError('')
-    const { error: signInError, role: userRole } = await signIn(email, password)
-    if (signInError) {
-      const errMsg = typeof signInError?.message === 'string' ? signInError.message : ''
-      if (errMsg.includes('Perfil não encontrado')) {
-        setError(errMsg)
-      } else {
-        setError('E-mail ou senha inválidos.')
-      }
-      setLoading(false)
-    } else if (userRole === 'gestor') {
-      navigate('/dashboard')
-    } else if (userRole === 'investidor') {
-      navigate('/investor-dashboard')
+    setLoading(true)
+
+    const result = isSignUp ? await signUp(email, password) : await signIn(email, password)
+
+    setLoading(false)
+
+    if (result.error) {
+      setError(result.error?.message || 'Erro ao autenticar. Verifique suas credenciais.')
     } else {
-      setError('Não foi possível determinar seu perfil.')
-      setLoading(false)
+      navigate('/dashboard')
     }
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-emerald-50/30 to-teal-50/20 px-4">
-      <Card className="w-full max-w-md border-slate-200 shadow-lg">
-        <CardHeader className="text-center pb-2">
-          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-600 text-white shadow-md shadow-emerald-600/20">
-            <Building2 className="h-7 w-7" />
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 p-4">
+      <Card className="w-full max-w-md">
+        <CardHeader className="space-y-1 text-center">
+          <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-lg bg-primary">
+            <FileText className="h-6 w-6 text-primary-foreground" />
           </div>
-          <CardTitle className="text-xl font-bold text-slate-900">Controle de Repasses</CardTitle>
-          <p className="text-sm text-slate-500 mt-1">Aluguéis Garantidos</p>
+          <CardTitle className="text-2xl">Controle de Repasses</CardTitle>
+          <CardDescription>
+            {isSignUp ? 'Crie sua conta' : 'Entre com suas credenciais'}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               <Label htmlFor="email">E-mail</Label>
               <Input
                 id="email"
                 type="email"
+                placeholder="seu@email.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="seu@email.com"
                 required
-                disabled={loading}
               />
             </div>
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               <Label htmlFor="password">Senha</Label>
               <Input
                 id="password"
                 type="password"
+                placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
                 required
-                disabled={loading}
+                minLength={8}
               />
             </div>
-            {error && (
-              <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md px-3 py-2">
-                {error}
-              </p>
-            )}
+            {error && <p className="text-sm text-destructive">{error}</p>}
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isSignUp ? 'Cadastrar' : 'Entrar'}
+            </Button>
             <Button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
+              type="button"
+              variant="link"
+              className="w-full"
+              onClick={() => {
+                setIsSignUp(!isSignUp)
+                setError('')
+              }}
             >
-              {loading ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Entrando...
-                </>
-              ) : (
-                'Entrar'
-              )}
+              {isSignUp ? 'Já tem conta? Entrar' : 'Não tem conta? Cadastre-se'}
             </Button>
           </form>
-          <div className="mt-4 text-center text-xs text-slate-400 border-t border-slate-100 pt-3">
-            <p>Credenciais de teste:</p>
-            <p className="font-medium text-slate-500">gabsilvio@gmail.com / Skip@Pass</p>
-          </div>
         </CardContent>
       </Card>
     </div>

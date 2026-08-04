@@ -1,17 +1,25 @@
 import pb from '@/lib/pocketbase/client'
+import type { RecordModel } from 'pocketbase'
 
-export const getProfiles = () => pb.collection('profiles').getFullList({ sort: '-created' })
-export const getProfile = (id: string) => pb.collection('profiles').getOne(id)
-export const getProfileByUserId = (userId: string) =>
-  pb.collection('profiles').getFirstListItem(`user_id = "${userId}"`)
-export const createProfile = (data: {
+export interface ProfileRecord extends RecordModel {
   user_id: string
-  role: string
+  role: 'gestor' | 'investidor'
   name: string
-  phone?: string
-}) => pb.collection('profiles').create(data)
-export const updateProfile = (
-  id: string,
-  data: Partial<{ role: string; name: string; phone: string }>,
-) => pb.collection('profiles').update(id, data)
-export const deleteProfile = (id: string) => pb.collection('profiles').delete(id)
+  phone: string
+}
+
+export const getProfile = async (userId: string): Promise<ProfileRecord | null> => {
+  try {
+    return await pb.collection('profiles').getFirstListItem<ProfileRecord>(`user_id = "${userId}"`)
+  } catch {
+    return null
+  }
+}
+
+export const createProfile = async (data: Partial<ProfileRecord>) => {
+  return await pb.collection('profiles').create<ProfileRecord>(data)
+}
+
+export const updateProfile = async (id: string, data: Partial<ProfileRecord>) => {
+  return await pb.collection('profiles').update<ProfileRecord>(id, data)
+}

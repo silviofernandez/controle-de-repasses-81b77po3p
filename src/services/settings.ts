@@ -1,22 +1,29 @@
 import pb from '@/lib/pocketbase/client'
+import type { RecordModel } from 'pocketbase'
 
-export interface Setting {
-  id: string
+export interface SettingRecord extends RecordModel {
   key: string
   value: string
   description: string
 }
 
-export const getSettings = () =>
-  pb.collection('settings').getFullList({ sort: 'key' }) as Promise<Setting[]>
+export const getSettings = async (): Promise<SettingRecord[]> => {
+  return await pb.collection('settings').getFullList<SettingRecord>()
+}
 
-export const getSetting = (key: string) =>
-  pb.collection('settings').getFirstListItem(`key = "${key}"`) as Promise<Setting>
+export const getSetting = async (key: string): Promise<string | null> => {
+  try {
+    const record = await pb.collection('settings').getFirstListItem<SettingRecord>(`key = "${key}"`)
+    return record.value
+  } catch {
+    return null
+  }
+}
 
-export const createSetting = (data: { key: string; value: string; description?: string }) =>
-  pb.collection('settings').create(data)
+export const updateSetting = async (id: string, data: Partial<SettingRecord>) => {
+  return await pb.collection('settings').update<SettingRecord>(id, data)
+}
 
-export const updateSetting = (id: string, data: Partial<{ value: string; description: string }>) =>
-  pb.collection('settings').update(id, data)
-
-export const deleteSetting = (id: string) => pb.collection('settings').delete(id)
+export const createSetting = async (data: Partial<SettingRecord>) => {
+  return await pb.collection('settings').create<SettingRecord>(data)
+}

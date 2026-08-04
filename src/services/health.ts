@@ -1,15 +1,10 @@
 import pb from '@/lib/pocketbase/client'
 
-export async function checkDatabaseHealth(): Promise<boolean> {
+export const checkHealth = async (): Promise<boolean> => {
   try {
-    const res = await pb.health.check()
-    return res.code === 200
+    await pb.health.getHealth({ requestKey: null })
+    return true
   } catch {
-    try {
-      await pb.send('/api/health', { method: 'GET' })
-      return true
-    } catch {
-      return false
-    }
+    return false
   }
 }

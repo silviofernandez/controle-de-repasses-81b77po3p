@@ -1,30 +1,24 @@
-import { Navigate, Outlet } from 'react-router-dom'
-import { Loader2 } from 'lucide-react'
+import { Navigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
+import { Skeleton } from '@/components/ui/skeleton'
 
-interface ProtectedRouteProps {
-  allowedRoles?: string[]
-}
-
-export function ProtectedRoute({ allowedRoles }: ProtectedRouteProps) {
-  const { isAuthenticated, role, loading } = useAuth()
+export function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, loading } = useAuth()
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
+      <div className="flex h-screen items-center justify-center">
+        <div className="space-y-4">
+          <Skeleton className="h-12 w-12 rounded-full" />
+          <Skeleton className="h-4 w-[200px]" />
+        </div>
       </div>
     )
   }
 
-  if (!isAuthenticated || !role) {
+  if (!isAuthenticated) {
     return <Navigate to="/login" replace />
   }
 
-  if (allowedRoles && !allowedRoles.includes(role)) {
-    const redirectTo = role === 'gestor' ? '/dashboard' : '/investor-dashboard'
-    return <Navigate to={redirectTo} replace />
-  }
-
-  return <Outlet />
+  return <>{children}</>
 }
