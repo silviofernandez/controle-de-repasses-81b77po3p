@@ -4,10 +4,12 @@ import { Toaster as Sonner } from '@/components/ui/sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { AuthProvider } from '@/hooks/use-auth'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
-import Index from './pages/Index'
-import Login from './pages/Login'
-import NotFound from './pages/NotFound'
-import { Layout } from './components/Layout'
+import Index from '@/pages/Index'
+import Login from '@/pages/Login'
+import Dashboard from '@/pages/Dashboard'
+import InvestorDashboard from '@/pages/InvestorDashboard'
+import NotFound from '@/pages/NotFound'
+import { Layout } from '@/components/Layout'
 
 const App = () => (
   <BrowserRouter>
@@ -20,6 +22,16 @@ const App = () => (
           <Route element={<ProtectedRoute />}>
             <Route element={<Layout />}>
               <Route path="/" element={<Index />} />
+            </Route>
+          </Route>
+          <Route element={<ProtectedRoute allowedRoles={['gestor']} />}>
+            <Route element={<Layout />}>
+              <Route path="/dashboard" element={<Dashboard />} />
+            </Route>
+          </Route>
+          <Route element={<ProtectedRoute allowedRoles={['investidor']} />}>
+            <Route element={<Layout />}>
+              <Route path="/investor-dashboard" element={<InvestorDashboard />} />
             </Route>
           </Route>
           <Route path="*" element={<NotFound />} />

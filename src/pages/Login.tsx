@@ -1,31 +1,52 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Navigate } from 'react-router-dom'
 import { Building2, Loader2 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useAuth } from '@/hooks/use-auth'
-import { getErrorMessage } from '@/lib/pocketbase/errors'
 
 export default function Login() {
   const navigate = useNavigate()
-  const { signIn } = useAuth()
+  const { signIn, isAuthenticated, role, loading: authLoading } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
+      </div>
+    )
+  }
+
+  if (isAuthenticated && role) {
+    return <Navigate to={role === 'gestor' ? '/dashboard' : '/investor-dashboard'} replace />
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError('')
-    const { error: signInError } = await signIn(email, password)
+    const { error: signInError, role: userRole } = await signIn(email, password)
     if (signInError) {
-      setError(getErrorMessage(signInError))
+      const errMsg = typeof signInError?.message === 'string' ? signInError.message : ''
+      if (errMsg.includes('Perfil não encontrado')) {
+        setError(errMsg)
+      } else {
+        setError('E-mail ou senha inválidos.')
+      }
       setLoading(false)
-    } else {
+    } else if (userRole === 'gestor') {
       navigate('/dashboard')
+    } else if (userRole === 'investidor') {
+      navigate('/investor-dashboard')
+    } else {
+      setError('Não foi possível determinar seu perfil.')
+      setLoading(false)
     }
   }
 
@@ -50,6 +71,7 @@ export default function Login() {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="seu@email.com"
                 required
+                disabled={loading}
               />
             </div>
             <div className="space-y-1.5">
@@ -61,6 +83,7 @@ export default function Login() {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
                 required
+                disabled={loading}
               />
             </div>
             {error && (

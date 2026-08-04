@@ -1,8 +1,17 @@
-import { Outlet } from 'react-router-dom'
-import { Building2 } from 'lucide-react'
+import { Outlet, useNavigate } from 'react-router-dom'
+import { Building2, LogOut } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { useAuth } from '@/hooks/use-auth'
 
 export function Layout() {
   const currentYear = new Date().getFullYear()
+  const { signOut } = useAuth()
+  const navigate = useNavigate()
+
+  const handleSignOut = () => {
+    signOut()
+    navigate('/login')
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900">
@@ -21,6 +30,15 @@ export function Layout() {
               </span>
             </div>
           </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleSignOut}
+            className="text-slate-600 hover:text-slate-900"
+          >
+            <LogOut className="h-4 w-4 mr-1.5" />
+            Sair
+          </Button>
         </div>
       </header>
 
