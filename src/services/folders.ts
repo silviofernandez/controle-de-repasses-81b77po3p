@@ -3,6 +3,7 @@ import pb from '@/lib/pocketbase/client'
 export interface Folder {
   id: string
   contract_number: string
+  owner_name: string
   investor_id: string
   insurer_id: string
   initial_date: string
@@ -40,6 +41,9 @@ export const getInvestorFolders = () =>
 
 export const getFolder = (id: string) =>
   pb.send(`/backend/v1/folders/${id}`, { method: 'GET' }) as Promise<Folder>
+
+export const getFolderFull = (id: string) =>
+  pb.send(`/backend/v1/folders/${id}/full`, { method: 'GET' }) as Promise<Folder>
 
 export const createFolder = (data: Record<string, any>) => pb.collection('folders').create(data)
 

@@ -9,6 +9,7 @@ import Login from '@/pages/Login'
 import Dashboard from '@/pages/Dashboard'
 import InvestorDashboard from '@/pages/InvestorDashboard'
 import Folders from '@/pages/Folders'
+import FolderNew from '@/pages/FolderNew'
 import Relationships from '@/pages/Relationships'
 import Reports from '@/pages/Reports'
 import Settings from '@/pages/Settings'
@@ -32,6 +33,7 @@ const App = () => (
           <Route element={<ProtectedRoute allowedRoles={['gestor']} />}>
             <Route element={<Layout />}>
               <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/folders/new" element={<FolderNew />} />
               <Route path="/folders" element={<Folders />} />
               <Route path="/relationships" element={<Relationships />} />
               <Route path="/reports" element={<Reports />} />
