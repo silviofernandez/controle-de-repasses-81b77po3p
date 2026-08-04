@@ -28,16 +28,18 @@ export interface Folder {
   }
 }
 
-export const getFolders = () =>
-  pb
-    .collection('folders')
-    .getFullList({ sort: '-created', expand: 'investor_id,insurer_id' }) as Promise<Folder[]>
+export const getFolders = async (): Promise<Folder[]> => {
+  const res = (await pb.send('/backend/v1/investor-folders', { method: 'GET' })) as {
+    items: Folder[]
+  }
+  return res.items
+}
 
 export const getInvestorFolders = () =>
   pb.send('/backend/v1/investor-folders', { method: 'GET' }) as Promise<{ items: Folder[] }>
 
 export const getFolder = (id: string) =>
-  pb.collection('folders').getOne(id, { expand: 'investor_id,insurer_id' }) as Promise<Folder>
+  pb.send(`/backend/v1/folders/${id}`, { method: 'GET' }) as Promise<Folder>
 
 export const createFolder = (data: Record<string, any>) => pb.collection('folders').create(data)
 

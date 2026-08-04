@@ -15,7 +15,7 @@ routerAdd(
             return r.getString('user_id') === userId
           })
 
-    const publicFields = [
+    const investorFields = [
       'id',
       'contract_number',
       'investor_id',
@@ -27,8 +27,6 @@ routerAdd(
       'estimated_receipt_date',
       'actual_receipt_date',
       'rent_amount',
-      'surcharge_percent',
-      'surcharge_amount',
       'investor_share_amount',
       'status',
       'notes',
@@ -36,11 +34,34 @@ routerAdd(
       'updated',
     ]
 
+    const gestorFields = investorFields.concat([
+      'repassed_date',
+      'surcharge_percent',
+      'investor_percent',
+      'surcharge_amount',
+      'company_share_amount',
+      'user_id',
+    ])
+
+    const fields = role === 'gestor' ? gestorFields : investorFields
+
     const result = folders.map(function (r) {
       const obj = {}
-      for (let i = 0; i < publicFields.length; i++) {
-        obj[publicFields[i]] = r.get(publicFields[i])
+      for (let i = 0; i < fields.length; i++) {
+        obj[fields[i]] = r.get(fields[i])
       }
+      obj.expand = {}
+      try {
+        const inv = $app.findRecordById('investors', r.getString('investor_id'))
+        obj.expand.investor_id = { id: inv.id, name: inv.getString('name') }
+      } catch (_) {}
+      try {
+        const insId = r.getString('insurer_id')
+        if (insId) {
+          const ins = $app.findRecordById('insurers', insId)
+          obj.expand.insurer_id = { id: ins.id, name: ins.getString('name') }
+        }
+      } catch (_) {}
       return obj
     })
 
