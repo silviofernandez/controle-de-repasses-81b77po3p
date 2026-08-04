@@ -27,7 +27,7 @@ export function ProtectedRoute({
   }
 
   if (allowedRoles && user?.role && !allowedRoles.includes(user.role)) {
-    const redirectPath = user.role === 'investidor' ? '/investor' : '/dashboard'
+    const redirectPath = user.role === 'investidor' ? '/investor-dashboard' : '/dashboard'
     return <Navigate to={redirectPath} replace />
   }
 

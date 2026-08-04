@@ -13,6 +13,7 @@ import Relationships from '@/pages/Relationships'
 import Reports from '@/pages/Reports'
 import Settings from '@/pages/Settings'
 import InvestorDashboard from '@/pages/InvestorDashboard'
+import InvestorUpcoming from '@/pages/InvestorUpcoming'
 import InsurerSubmissions from '@/pages/InsurerSubmissions'
 import NotFound from '@/pages/NotFound'
 
@@ -52,6 +53,22 @@ export default function App() {
               }
             />
             <Route path="/settings" element={<Settings />} />
+            <Route
+              path="/investor-dashboard"
+              element={
+                <ProtectedRoute allowedRoles={['investidor']}>
+                  <InvestorDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/investor-upcoming"
+              element={
+                <ProtectedRoute allowedRoles={['investidor']}>
+                  <InvestorUpcoming />
+                </ProtectedRoute>
+              }
+            />
             <Route path="/investor" element={<InvestorDashboard />} />
           </Route>
           <Route path="*" element={<NotFound />} />
