@@ -17,7 +17,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { getInvestors, type InvestorRecord } from '@/services/investors'
+import { InvestorCombobox } from '@/components/InvestorCombobox'
+import { getInvestors, createInvestor, type InvestorRecord } from '@/services/investors'
 import { getInsurers, type InsurerRecord } from '@/services/insurers'
 import {
   createFolder,
@@ -28,6 +29,8 @@ import {
 import { useToast } from '@/components/ui/use-toast'
 import { useAuth } from '@/hooks/use-auth'
 import { InlineSpinner } from '@/components/page-states'
+import { Link } from 'react-router-dom'
+import { ExternalLink } from 'lucide-react'
 
 interface FolderFormDialogProps {
   open: boolean
@@ -44,83 +47,76 @@ const statusOptions: { value: FolderStatus; label: string }[] = [
   { value: 'repassado', label: 'Repassado' },
 ]
 
+const emptyForm = {
+  contract_number: '',
+  owner_name: '',
+  investor_id: '',
+  is_new_investor: false,
+  new_investor_name: '',
+  insurer_id: '',
+  initial_date: '',
+  due_date: '',
+  owner_transfer_date: '',
+  insurer_submission_date: '',
+  estimated_receipt_date: '',
+  actual_receipt_date: '',
+  repassed_date: '',
+  rent_amount: '',
+  investor_share_amount: '',
+  received_amount: '',
+  status: 'pendente' as FolderStatus,
+  notes: '',
+}
+
 export function FolderFormDialog({ open, onOpenChange, folder, onSaved }: FolderFormDialogProps) {
   const { user } = useAuth()
   const { toast } = useToast()
   const [investors, setInvestors] = useState<InvestorRecord[]>([])
   const [insurers, setInsurers] = useState<InsurerRecord[]>([])
   const [saving, setSaving] = useState(false)
-
-  const [form, setForm] = useState({
-    contract_number: '',
-    owner_name: '',
-    investor_id: '',
-    insurer_id: '',
-    initial_date: '',
-    due_date: '',
-    owner_transfer_date: '',
-    insurer_submission_date: '',
-    estimated_receipt_date: '',
-    actual_receipt_date: '',
-    repassed_date: '',
-    rent_amount: '',
-    investor_share_amount: '',
-    received_amount: '',
-    status: 'pendente' as FolderStatus,
-    notes: '',
-  })
+  const [loadingDeps, setLoadingDeps] = useState(false)
+  const [form, setForm] = useState(emptyForm)
 
   useEffect(() => {
-    if (open) {
-      loadDependencies()
-      if (folder) {
-        setForm({
-          contract_number: folder.contract_number || '',
-          owner_name: folder.owner_name || '',
-          investor_id: folder.investor_id || '',
-          insurer_id: folder.insurer_id || '',
-          initial_date: folder.initial_date || '',
-          due_date: folder.due_date || '',
-          owner_transfer_date: folder.owner_transfer_date || '',
-          insurer_submission_date: folder.insurer_submission_date || '',
-          estimated_receipt_date: folder.estimated_receipt_date || '',
-          actual_receipt_date: folder.actual_receipt_date || '',
-          repassed_date: folder.repassed_date || '',
-          rent_amount: folder.rent_amount?.toString() || '',
-          investor_share_amount: folder.investor_share_amount?.toString() || '',
-          received_amount: folder.received_amount?.toString() || '',
-          status: folder.status || 'pendente',
-          notes: folder.notes || '',
-        })
-      } else {
-        setForm({
-          contract_number: '',
-          owner_name: '',
-          investor_id: '',
-          insurer_id: '',
-          initial_date: '',
-          due_date: '',
-          owner_transfer_date: '',
-          insurer_submission_date: '',
-          estimated_receipt_date: '',
-          actual_receipt_date: '',
-          repassed_date: '',
-          rent_amount: '',
-          investor_share_amount: '',
-          status: 'pendente',
-          notes: '',
-        })
-      }
+    if (!open) return
+    loadDependencies()
+    if (folder) {
+      setForm({
+        ...emptyForm,
+        contract_number: folder.contract_number || '',
+        owner_name: folder.owner_name || '',
+        investor_id: folder.investor_id || '',
+        is_new_investor: false,
+        new_investor_name: '',
+        insurer_id: folder.insurer_id || '',
+        initial_date: folder.initial_date || '',
+        due_date: folder.due_date || '',
+        owner_transfer_date: folder.owner_transfer_date || '',
+        insurer_submission_date: folder.insurer_submission_date || '',
+        estimated_receipt_date: folder.estimated_receipt_date || '',
+        actual_receipt_date: folder.actual_receipt_date || '',
+        repassed_date: folder.repassed_date || '',
+        rent_amount: folder.rent_amount?.toString() || '',
+        investor_share_amount: folder.investor_share_amount?.toString() || '',
+        received_amount: folder.received_amount?.toString() || '',
+        status: folder.status || 'pendente',
+        notes: folder.notes || '',
+      })
+    } else {
+      setForm(emptyForm)
     }
   }, [open, folder])
 
   const loadDependencies = async () => {
+    setLoadingDeps(true)
     try {
       const [inv, ins] = await Promise.all([getInvestors(), getInsurers()])
       setInvestors(inv)
       setInsurers(ins)
     } catch {
       toast({ title: 'Erro', description: 'Falha ao carregar dados.', variant: 'destructive' })
+    } finally {
+      setLoadingDeps(false)
     }
   }
 
@@ -129,11 +125,27 @@ export function FolderFormDialog({ open, onOpenChange, folder, onSaved }: Folder
     if (!user?.id) return
     setSaving(true)
 
+    let finalInvestorId = form.investor_id
+    if (form.is_new_investor && form.new_investor_name) {
+      try {
+        const newInvestor = await createInvestor({ name: form.new_investor_name })
+        finalInvestorId = newInvestor.id
+      } catch {
+        toast({
+          title: 'Erro',
+          description: 'Falha ao criar investidor.',
+          variant: 'destructive',
+        })
+        setSaving(false)
+        return
+      }
+    }
+
     const data: Record<string, any> = {
       contract_number: form.contract_number,
       owner_name: form.owner_name,
-      investor_id: form.investor_id,
-      insurer_id: form.insurer_id,
+      investor_id: finalInvestorId,
+      insurer_id: form.insurer_id || null,
       initial_date: form.initial_date || null,
       due_date: form.due_date || null,
       owner_transfer_date: form.owner_transfer_date || null,
@@ -202,30 +214,36 @@ export function FolderFormDialog({ open, onOpenChange, folder, onSaved }: Folder
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Investidor</Label>
-              <Select
-                value={form.investor_id}
-                onValueChange={(v) => setForm({ ...form, investor_id: v })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {investors.map((inv) => (
-                    <SelectItem key={inv.id} value={inv.id}>
-                      {inv.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <InvestorCombobox
+                investorId={form.investor_id}
+                isNewInvestor={form.is_new_investor}
+                newInvestorName={form.new_investor_name}
+                investors={investors}
+                loading={loadingDeps}
+                onChange={(investorId, isNew, name) =>
+                  setForm({
+                    ...form,
+                    investor_id: investorId,
+                    is_new_investor: isNew,
+                    new_investor_name: name,
+                  })
+                }
+              />
+              {form.is_new_investor && (
+                <p className="text-sm text-muted-foreground">
+                  Novo investidor será criado: <strong>{form.new_investor_name}</strong>
+                </p>
+              )}
             </div>
             <div className="space-y-2">
               <Label>Seguradora</Label>
               <Select
                 value={form.insurer_id}
                 onValueChange={(v) => setForm({ ...form, insurer_id: v })}
+                disabled={loadingDeps}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecione..." />
+                  <SelectValue placeholder={loadingDeps ? 'Carregando...' : 'Selecione...'} />
                 </SelectTrigger>
                 <SelectContent>
                   {insurers.map((ins) => (
@@ -235,6 +253,13 @@ export function FolderFormDialog({ open, onOpenChange, folder, onSaved }: Folder
                   ))}
                 </SelectContent>
               </Select>
+              <Link
+                to="/insurers"
+                className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+              >
+                <ExternalLink className="h-3 w-3" />
+                Gerenciar seguradoras
+              </Link>
             </div>
           </div>
 
@@ -246,6 +271,7 @@ export function FolderFormDialog({ open, onOpenChange, folder, onSaved }: Folder
                 type="date"
                 value={form.initial_date}
                 onChange={(e) => setForm({ ...form, initial_date: e.target.value })}
+                required
               />
             </div>
             <div className="space-y-2">

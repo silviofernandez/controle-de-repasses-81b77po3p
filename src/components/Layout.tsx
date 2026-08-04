@@ -13,6 +13,7 @@ import {
   Menu,
   Wallet,
   Send,
+  Building2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useState } from 'react'
@@ -29,6 +30,7 @@ const navItems: NavItem[] = [
   { to: '/folders', label: 'Pastas', icon: FolderCog },
   { to: '/payments', label: 'Repasses', icon: Wallet },
   { to: '/insurer-submissions', label: 'Envios à Seguradora', icon: Send, roles: ['gestor'] },
+  { to: '/insurers', label: 'Seguradoras', icon: Building2, roles: ['gestor'] },
   { to: '/relationships', label: 'Relacionamentos', icon: Users },
   { to: '/reports', label: 'Relatórios', icon: BarChart3, roles: ['gestor'] },
   { to: '/settings', label: 'Configurações', icon: Settings },

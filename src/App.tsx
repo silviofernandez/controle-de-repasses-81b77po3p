@@ -16,6 +16,7 @@ import Settings from '@/pages/Settings'
 import InvestorDashboard from '@/pages/InvestorDashboard'
 import InvestorUpcoming from '@/pages/InvestorUpcoming'
 import InsurerSubmissions from '@/pages/InsurerSubmissions'
+import Insurers from '@/pages/Insurers'
 import NotFound from '@/pages/NotFound'
 
 export default function App() {
@@ -46,6 +47,14 @@ export default function App() {
               }
             />
             <Route path="/relationships" element={<Relationships />} />
+            <Route
+              path="/insurers"
+              element={
+                <ProtectedRoute allowedRoles={['gestor']}>
+                  <Insurers />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="/reports"
               element={
