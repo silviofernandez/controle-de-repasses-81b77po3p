@@ -8,6 +8,7 @@ import Index from '@/pages/Index'
 import Dashboard from '@/pages/Dashboard'
 import Folders from '@/pages/Folders'
 import FolderNew from '@/pages/FolderNew'
+import FolderDetail from '@/pages/FolderDetail'
 import Payments from '@/pages/Payments'
 import Relationships from '@/pages/Relationships'
 import Reports from '@/pages/Reports'
@@ -34,6 +35,7 @@ export default function App() {
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/folders" element={<Folders />} />
             <Route path="/folders/new" element={<FolderNew />} />
+            <Route path="/folders/:id" element={<FolderDetail />} />
             <Route path="/payments" element={<Payments />} />
             <Route
               path="/insurer-submissions"

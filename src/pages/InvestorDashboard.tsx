@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
@@ -9,11 +9,12 @@ import {
   TrendingUp,
   Wallet,
   BarChart3,
-  AlertCircle,
   CalendarClock,
+  TrendingDown,
 } from 'lucide-react'
 import { getInvestorStatement, type InvestorStatement } from '@/services/investor-dashboard'
 import { formatCurrency } from '@/lib/format'
+import { LoadingCards, ErrorState, EmptyState } from '@/components/page-states'
 
 export default function InvestorDashboard() {
   const [statement, setStatement] = useState<InvestorStatement | null>(null)
@@ -21,6 +22,7 @@ export default function InvestorDashboard() {
   const [error, setError] = useState(false)
 
   const loadData = async () => {
+    setLoading(true)
     try {
       const data = await getInvestorStatement()
       setStatement(data)
@@ -39,22 +41,43 @@ export default function InvestorDashboard() {
   if (loading) {
     return (
       <div className="space-y-6">
-        <Skeleton className="h-8 w-64" />
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {[...Array(5)].map((_, i) => (
-            <Skeleton key={i} className="h-32" />
-          ))}
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-8 w-64" />
+          <Skeleton className="h-10 w-40" />
         </div>
+        <LoadingCards count={5} />
       </div>
     )
   }
 
-  if (error || !statement) {
+  if (error) {
     return (
-      <div className="flex flex-col items-center justify-center gap-4 py-20">
-        <AlertCircle className="h-12 w-12 text-muted-foreground" />
-        <p className="text-muted-foreground">Não foi possível carregar seus dados.</p>
-        <Button onClick={loadData}>Tentar novamente</Button>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold">Meu Painel</h1>
+          <Button asChild variant="outline">
+            <Link to="/investor-upcoming">
+              <CalendarClock className="mr-2 h-4 w-4" /> Próximos Repasses
+            </Link>
+          </Button>
+        </div>
+        <ErrorState message="Não foi possível carregar seus dados." onRetry={loadData} />
+      </div>
+    )
+  }
+
+  if (!statement) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold">Meu Painel</h1>
+          <Button asChild variant="outline">
+            <Link to="/investor-upcoming">
+              <CalendarClock className="mr-2 h-4 w-4" /> Próximos Repasses
+            </Link>
+          </Button>
+        </div>
+        <EmptyState message="Ainda não existem movimentações para exibir." icon={TrendingDown} />
       </div>
     )
   }

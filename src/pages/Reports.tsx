@@ -22,6 +22,7 @@ import {
   type PeriodType,
 } from '@/services/reports'
 import { cn } from '@/lib/utils'
+import { LoadingCards, LoadingRows, ErrorState, EmptyState } from '@/components/page-states'
 
 export default function Reports() {
   const [period, setPeriod] = useState<PeriodType>('mes')
@@ -38,6 +39,7 @@ export default function Reports() {
       setLoading(false)
       return
     }
+    setLoading(true)
     try {
       const data = await getGestorReport(start, end)
       setReport(data)
@@ -55,27 +57,35 @@ export default function Reports() {
 
   useRealtime('folders', () => loadData())
 
-  if (loading)
+  if (loading) {
     return (
       <div className="space-y-6">
-        <Skeleton className="h-8 w-32" />
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {[...Array(4)].map((_, i) => (
-            <Skeleton key={i} className="h-28" />
-          ))}
+        <div className="flex items-center gap-2">
+          <BarChart3 className="h-6 w-6" />
+          <Skeleton className="h-8 w-32" />
         </div>
-        <Skeleton className="h-64" />
+        <Skeleton className="h-10 w-full" />
+        <LoadingCards count={4} />
+        <Card>
+          <CardContent className="p-0">
+            <LoadingRows count={5} />
+          </CardContent>
+        </Card>
       </div>
     )
+  }
 
-  if (error)
+  if (error) {
     return (
-      <div className="flex flex-col items-center justify-center gap-4 py-20">
-        <AlertCircle className="h-12 w-12 text-muted-foreground" />
-        <p className="text-muted-foreground">Não foi possível carregar os relatórios.</p>
-        <Button onClick={loadData}>Tentar novamente</Button>
+      <div className="space-y-6">
+        <div className="flex items-center gap-2">
+          <BarChart3 className="h-6 w-6" />
+          <h1 className="text-2xl font-bold">Relatórios</h1>
+        </div>
+        <ErrorState message="Não foi possível carregar os relatórios." onRetry={loadData} />
       </div>
     )
+  }
 
   const ind = report?.indicators
   const indicators = [
@@ -104,6 +114,8 @@ export default function Reports() {
       color: 'text-orange-600',
     },
   ]
+
+  const hasData = report && report.total_folders > 0
 
   return (
     <div className="space-y-6">
@@ -142,72 +154,71 @@ export default function Reports() {
         )}
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {indicators.map((item) => {
-          const Icon = item.icon
-          return (
-            <Card key={item.label}>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm text-muted-foreground">{item.label}</p>
-                  <Icon className={cn('h-5 w-5', item.color)} />
-                </div>
-                <p className="mt-2 text-xl font-bold">{formatCurrency(item.value)}</p>
-              </CardContent>
-            </Card>
-          )
-        })}
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Pastas em Aberto ({report?.open_folders?.length || 0})</CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="border-b bg-muted/50">
-                <tr>
-                  <th className="px-4 py-3 text-left font-medium">Nº da Pasta</th>
-                  <th className="px-4 py-3 text-left font-medium">Proprietário</th>
-                  <th className="px-4 py-3 text-left font-medium">Seguradora</th>
-                  <th className="px-4 py-3 text-left font-medium">Status</th>
-                  <th className="px-4 py-3 text-left font-medium">Vencimento</th>
-                  <th className="px-4 py-3 text-left font-medium">Recebimento Previsto</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(report?.open_folders || []).map((folder) => (
-                  <tr key={folder.id} className="border-b last:border-0 hover:bg-muted/50">
-                    <td className="px-4 py-3 font-medium">{folder.contract_number}</td>
-                    <td className="px-4 py-3">{folder.owner_name || '-'}</td>
-                    <td className="px-4 py-3">{folder.insurer_name || '-'}</td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={cn(
-                          'rounded-full px-2 py-1 text-xs font-medium',
-                          STATUS_INFO[folder.status]?.className || 'bg-gray-100 text-gray-800',
-                        )}
-                      >
-                        {STATUS_INFO[folder.status]?.label || folder.status}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">{formatDate(folder.due_date)}</td>
-                    <td className="px-4 py-3">{formatDate(folder.estimated_receipt_date)}</td>
-                  </tr>
-                ))}
-                {(report?.open_folders?.length || 0) === 0 && (
-                  <tr>
-                    <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
-                      Nenhuma pasta em aberto no período selecionado.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+      {!hasData ? (
+        <EmptyState message="Nenhum dado encontrado para o período selecionado." icon={BarChart3} />
+      ) : (
+        <>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {indicators.map((item) => {
+              const Icon = item.icon
+              return (
+                <Card key={item.label}>
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm text-muted-foreground">{item.label}</p>
+                      <Icon className={cn('h-5 w-5', item.color)} />
+                    </div>
+                    <p className="mt-2 text-xl font-bold">{formatCurrency(item.value)}</p>
+                  </CardContent>
+                </Card>
+              )
+            })}
           </div>
-        </CardContent>
-      </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Pastas em Aberto ({report?.open_folders?.length || 0})</CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="border-b bg-muted/50">
+                    <tr>
+                      <th className="px-4 py-3 text-left font-medium">Nº da Pasta</th>
+                      <th className="px-4 py-3 text-left font-medium">Proprietário</th>
+                      <th className="px-4 py-3 text-left font-medium">Seguradora</th>
+                      <th className="px-4 py-3 text-left font-medium">Status</th>
+                      <th className="px-4 py-3 text-left font-medium">Vencimento</th>
+                      <th className="px-4 py-3 text-left font-medium">Recebimento Previsto</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(report?.open_folders || []).map((folder) => (
+                      <tr key={folder.id} className="border-b last:border-0 hover:bg-muted/50">
+                        <td className="px-4 py-3 font-medium">{folder.contract_number}</td>
+                        <td className="px-4 py-3">{folder.owner_name || '-'}</td>
+                        <td className="px-4 py-3">{folder.insurer_name || '-'}</td>
+                        <td className="px-4 py-3">
+                          <span
+                            className={cn(
+                              'rounded-full px-2 py-1 text-xs font-medium',
+                              STATUS_INFO[folder.status]?.className || 'bg-gray-100 text-gray-800',
+                            )}
+                          >
+                            {STATUS_INFO[folder.status]?.label || folder.status}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">{formatDate(folder.due_date)}</td>
+                        <td className="px-4 py-3">{formatDate(folder.estimated_receipt_date)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        </>
+      )}
     </div>
   )
 }

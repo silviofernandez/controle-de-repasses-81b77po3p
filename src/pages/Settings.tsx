@@ -4,9 +4,10 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
-import { AlertCircle, Save } from 'lucide-react'
-import { getSettings, updateSetting, createSetting, type SettingRecord } from '@/services/settings'
+import { Save, Settings as SettingsIcon } from 'lucide-react'
+import { getSettings, updateSetting, type SettingRecord } from '@/services/settings'
 import { useToast } from '@/components/ui/use-toast'
+import { LoadingRows, ErrorState, EmptyState, InlineSpinner } from '@/components/page-states'
 
 export default function Settings() {
   const { toast } = useToast()
@@ -16,6 +17,7 @@ export default function Settings() {
   const [saving, setSaving] = useState(false)
 
   const loadData = async () => {
+    setLoading(true)
     try {
       const data = await getSettings()
       setSettings(data)
@@ -51,17 +53,20 @@ export default function Settings() {
     return (
       <div className="space-y-6">
         <Skeleton className="h-8 w-32" />
-        <Skeleton className="h-64" />
+        <Card>
+          <CardContent className="space-y-4">
+            <LoadingRows count={3} />
+          </CardContent>
+        </Card>
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center gap-4 py-20">
-        <AlertCircle className="h-12 w-12 text-muted-foreground" />
-        <p className="text-muted-foreground">Não foi possível carregar as configurações.</p>
-        <Button onClick={loadData}>Tentar novamente</Button>
+      <div className="space-y-6">
+        <h1 className="text-2xl font-bold">Configurações</h1>
+        <ErrorState message="Não foi possível carregar as configurações." onRetry={loadData} />
       </div>
     )
   }
@@ -70,17 +75,15 @@ export default function Settings() {
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Configurações</h1>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Parâmetros do Sistema</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {settings.length === 0 ? (
-            <p className="py-8 text-center text-sm text-muted-foreground">
-              Nenhuma configuração disponível.
-            </p>
-          ) : (
-            settings.map((setting) => (
+      {settings.length === 0 ? (
+        <EmptyState message="Nenhuma configuração encontrada." icon={SettingsIcon} />
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle>Parâmetros do Sistema</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {settings.map((setting) => (
               <div key={setting.id} className="flex items-end gap-4">
                 <div className="flex-1 space-y-2">
                   <Label htmlFor={setting.id}>{setting.description || setting.key}</Label>
@@ -91,13 +94,22 @@ export default function Settings() {
                   />
                 </div>
                 <Button size="sm" onClick={() => handleSave(setting)} disabled={saving}>
-                  <Save className="mr-1 h-4 w-4" /> Salvar
+                  {saving ? (
+                    <>
+                      <InlineSpinner className="mr-1" />
+                      Salvando...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="mr-1 h-4 w-4" /> Salvar
+                    </>
+                  )}
                 </Button>
               </div>
-            ))
-          )}
-        </CardContent>
-      </Card>
+            ))}
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }

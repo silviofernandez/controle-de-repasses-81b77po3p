@@ -27,6 +27,7 @@ import {
 } from '@/services/folders'
 import { useToast } from '@/components/ui/use-toast'
 import { useAuth } from '@/hooks/use-auth'
+import { InlineSpinner } from '@/components/page-states'
 
 interface FolderFormDialogProps {
   open: boolean
@@ -312,7 +313,14 @@ export function FolderFormDialog({ open, onOpenChange, folder, onSaved }: Folder
               Cancelar
             </Button>
             <Button type="submit" disabled={saving}>
-              {saving ? 'Salvando...' : 'Salvar'}
+              {saving ? (
+                <>
+                  <InlineSpinner className="mr-2" />
+                  Salvando...
+                </>
+              ) : (
+                'Salvar'
+              )}
             </Button>
           </DialogFooter>
         </form>

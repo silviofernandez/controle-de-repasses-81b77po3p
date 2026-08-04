@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { AlertCircle, Send, Printer, Mail, ClipboardCopy, Calendar } from 'lucide-react'
+import { Calendar, Send, Printer, Mail, ClipboardCopy } from 'lucide-react'
 import { useRealtime } from '@/hooks/use-realtime'
 import { useToast } from '@/components/ui/use-toast'
 import {
@@ -13,6 +13,7 @@ import {
   getTodayFormatted,
 } from '@/services/insurer-submissions'
 import type { FolderRecord } from '@/services/folders'
+import { LoadingRows, ErrorState, EmptyState, InlineSpinner } from '@/components/page-states'
 
 export default function InsurerSubmissions() {
   const { toast } = useToast()
@@ -20,8 +21,10 @@ export default function InsurerSubmissions() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
   const [sendingEmail, setSendingEmail] = useState(false)
+  const [emailError, setEmailError] = useState(false)
 
   const loadData = async () => {
+    setLoading(true)
     try {
       const data = await getTodaysInsurerSubmissions()
       setFolders(data)
@@ -65,10 +68,12 @@ export default function InsurerSubmissions() {
 
   const handleSendEmail = async () => {
     setSendingEmail(true)
+    setEmailError(false)
     try {
       await sendInsurerSubmissionEmail()
       toast({ title: 'Sucesso', description: 'Relatório enviado por e-mail com sucesso.' })
     } catch {
+      setEmailError(true)
       toast({
         title: 'Erro',
         description: 'Erro ao enviar o relatório. Tente novamente.',
@@ -84,17 +89,26 @@ export default function InsurerSubmissions() {
       <div className="space-y-6">
         <Skeleton className="h-8 w-48" />
         <Skeleton className="h-10 w-full" />
-        <Skeleton className="h-64" />
+        <Card>
+          <CardContent className="p-0">
+            <LoadingRows count={4} />
+          </CardContent>
+        </Card>
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center gap-4 py-20">
-        <AlertCircle className="h-12 w-12 text-muted-foreground" />
-        <p className="text-muted-foreground">Não foi possível carregar as pastas.</p>
-        <Button onClick={loadData}>Tentar novamente</Button>
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold">Envios à Seguradora</h1>
+          <p className="flex items-center gap-1 text-sm text-muted-foreground">
+            <Calendar className="h-4 w-4" />
+            {getTodayFormatted()}
+          </p>
+        </div>
+        <ErrorState onRetry={loadData} />
       </div>
     )
   }
@@ -128,19 +142,32 @@ export default function InsurerSubmissions() {
             onClick={handleSendEmail}
             disabled={folders.length === 0 || sendingEmail}
           >
-            <Mail className="mr-2 h-4 w-4" />
-            {sendingEmail ? 'Enviando...' : 'Enviar por E-mail'}
+            {sendingEmail ? (
+              <>
+                <InlineSpinner className="mr-2" />
+                Enviando...
+              </>
+            ) : (
+              <>
+                <Mail className="mr-2 h-4 w-4" />
+                Enviar por E-mail
+              </>
+            )}
           </Button>
         </div>
       </div>
 
+      {emailError && (
+        <div className="flex items-center justify-between rounded-lg border border-destructive/50 bg-destructive/10 p-4">
+          <p className="text-sm text-destructive">Erro ao enviar o relatório por e-mail.</p>
+          <Button variant="outline" size="sm" onClick={handleSendEmail} disabled={sendingEmail}>
+            Tentar novamente
+          </Button>
+        </div>
+      )}
+
       {folders.length === 0 ? (
-        <Card>
-          <CardContent className="py-16 text-center">
-            <Send className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
-            <p className="text-muted-foreground">Nenhuma pasta para envio à seguradora hoje.</p>
-          </CardContent>
-        </Card>
+        <EmptyState message="Nenhuma pasta para subir à seguradora hoje." icon={Send} />
       ) : (
         <Card>
           <CardContent className="p-0">

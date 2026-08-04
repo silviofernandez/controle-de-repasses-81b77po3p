@@ -4,12 +4,13 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Plus, Search, Pencil, Trash2, AlertCircle } from 'lucide-react'
+import { Plus, Search, Pencil, Trash2, FolderCog } from 'lucide-react'
 import { getFolders, deleteFolder, type FolderRecord } from '@/services/folders'
 import { FolderFormDialog } from '@/components/FolderFormDialog'
 import { useRealtime } from '@/hooks/use-realtime'
 import { useToast } from '@/components/ui/use-toast'
 import { formatCurrency, formatDate } from '@/lib/format'
+import { LoadingRows, ErrorState, EmptyState } from '@/components/page-states'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -48,6 +49,7 @@ export default function Folders() {
   const [deleteId, setDeleteId] = useState<string | null>(null)
 
   const loadData = async () => {
+    setLoading(true)
     try {
       const data = await getFolders()
       setFolders(data)
@@ -100,19 +102,30 @@ export default function Folders() {
   if (loading) {
     return (
       <div className="space-y-6">
-        <Skeleton className="h-8 w-32" />
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-8 w-32" />
+          <Skeleton className="h-10 w-32" />
+        </div>
         <Skeleton className="h-10 w-full" />
-        <Skeleton className="h-96" />
+        <Card>
+          <CardContent className="p-0">
+            <LoadingRows count={6} />
+          </CardContent>
+        </Card>
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center gap-4 py-20">
-        <AlertCircle className="h-12 w-12 text-muted-foreground" />
-        <p className="text-muted-foreground">Não foi possível carregar as pastas.</p>
-        <Button onClick={loadData}>Tentar novamente</Button>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold">Pastas</h1>
+          <Button onClick={handleNew}>
+            <Plus className="mr-2 h-4 w-4" /> Nova Pasta
+          </Button>
+        </div>
+        <ErrorState onRetry={loadData} />
       </div>
     )
   }
@@ -126,74 +139,88 @@ export default function Folders() {
         </Button>
       </div>
 
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          placeholder="Buscar por contrato, proprietário ou investidor..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="pl-10"
+      {folders.length === 0 ? (
+        <EmptyState
+          message="Nenhuma pasta cadastrada ainda."
+          icon={FolderCog}
+          action={
+            <Button onClick={handleNew}>
+              <Plus className="mr-2 h-4 w-4" /> Cadastrar primeira pasta
+            </Button>
+          }
         />
-      </div>
-
-      {filtered.length === 0 ? (
-        <Card>
-          <CardContent className="py-16 text-center">
-            <p className="text-muted-foreground">Nenhuma pasta encontrada.</p>
-          </CardContent>
-        </Card>
       ) : (
-        <Card>
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="border-b bg-muted/50">
-                  <tr>
-                    <th className="px-4 py-3 text-left font-medium">Contrato</th>
-                    <th className="px-4 py-3 text-left font-medium">Proprietário</th>
-                    <th className="px-4 py-3 text-left font-medium">Investidor</th>
-                    <th className="px-4 py-3 text-left font-medium">Valor</th>
-                    <th className="px-4 py-3 text-left font-medium">Status</th>
-                    <th className="px-4 py-3 text-left font-medium">Criado</th>
-                    <th className="px-4 py-3 text-right font-medium">Ações</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered.map((folder) => (
-                    <tr key={folder.id} className="border-b last:border-0 hover:bg-muted/50">
-                      <td className="px-4 py-3 font-medium">{folder.contract_number}</td>
-                      <td className="px-4 py-3">{folder.owner_name || '-'}</td>
-                      <td className="px-4 py-3">{folder.expand?.investor_id?.name || '-'}</td>
-                      <td className="px-4 py-3">{formatCurrency(folder.rent_amount || 0)}</td>
-                      <td className="px-4 py-3">
-                        <Badge variant={statusVariants[folder.status] || 'secondary'}>
-                          {statusLabels[folder.status] || folder.status}
-                        </Badge>
-                      </td>
-                      <td className="px-4 py-3 text-muted-foreground">
-                        {formatDate(folder.created)}
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex justify-end gap-2">
-                          <Button variant="ghost" size="icon" onClick={() => handleEdit(folder)}>
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setDeleteId(folder.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
+        <>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por contrato, proprietário ou investidor..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+
+          {filtered.length === 0 ? (
+            <EmptyState message="Nenhuma pasta encontrada com os filtros aplicados." />
+          ) : (
+            <Card>
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="border-b bg-muted/50">
+                      <tr>
+                        <th className="px-4 py-3 text-left font-medium">Contrato</th>
+                        <th className="px-4 py-3 text-left font-medium">Proprietário</th>
+                        <th className="px-4 py-3 text-left font-medium">Investidor</th>
+                        <th className="px-4 py-3 text-left font-medium">Valor</th>
+                        <th className="px-4 py-3 text-left font-medium">Status</th>
+                        <th className="px-4 py-3 text-left font-medium">Criado</th>
+                        <th className="px-4 py-3 text-right font-medium">Ações</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filtered.map((folder) => (
+                        <tr key={folder.id} className="border-b last:border-0 hover:bg-muted/50">
+                          <td className="px-4 py-3 font-medium">{folder.contract_number}</td>
+                          <td className="px-4 py-3">{folder.owner_name || '-'}</td>
+                          <td className="px-4 py-3">{folder.expand?.investor_id?.name || '-'}</td>
+                          <td className="px-4 py-3">{formatCurrency(folder.rent_amount || 0)}</td>
+                          <td className="px-4 py-3">
+                            <Badge variant={statusVariants[folder.status] || 'secondary'}>
+                              {statusLabels[folder.status] || folder.status}
+                            </Badge>
+                          </td>
+                          <td className="px-4 py-3 text-muted-foreground">
+                            {formatDate(folder.created)}
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleEdit(folder)}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => setDeleteId(folder.id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </>
       )}
 
       <FolderFormDialog
