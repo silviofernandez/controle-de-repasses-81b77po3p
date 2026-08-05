@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Plus, AlertCircle, Users, Building2 } from 'lucide-react'
+import { Plus, AlertCircle, Users, Building2, Loader2 } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -23,6 +23,7 @@ export default function Relationships() {
   const [investors, setInvestors] = useState<InvestorRecord[]>([])
   const [insurers, setInsurers] = useState<InsurerRecord[]>([])
   const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
   const [error, setError] = useState(false)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [dialogType, setDialogType] = useState<'investor' | 'insurer'>('investor')
@@ -58,9 +59,19 @@ export default function Relationships() {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
+    setSaving(true)
     try {
       if (dialogType === 'investor') {
-        await createInvestor(form)
+        await createInvestor({
+          name: form.name,
+          email: form.email,
+          phone: form.phone,
+          document: form.document,
+        })
+        toast({
+          title: 'Sucesso',
+          description: 'Investidor cadastrado com sucesso!',
+        })
       } else {
         await createInsurer({
           name: form.name,
@@ -68,8 +79,11 @@ export default function Relationships() {
           contact_email: form.contact_email,
           contact_phone: form.contact_phone,
         })
+        toast({
+          title: 'Sucesso',
+          description: 'Seguradora cadastrada com sucesso!',
+        })
       }
-      toast({ title: 'Sucesso', description: 'Cadastro realizado.' })
       setDialogOpen(false)
       setForm({
         name: '',
@@ -80,13 +94,15 @@ export default function Relationships() {
         contact_email: '',
         contact_phone: '',
       })
-      loadData()
+      await loadData()
     } catch (err: any) {
       toast({
         title: 'Erro',
         description: err?.message || 'Falha ao salvar.',
         variant: 'destructive',
       })
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -127,6 +143,15 @@ export default function Relationships() {
               size="sm"
               onClick={() => {
                 setDialogType('investor')
+                setForm({
+                  name: '',
+                  email: '',
+                  phone: '',
+                  document: '',
+                  contact_name: '',
+                  contact_email: '',
+                  contact_phone: '',
+                })
                 setDialogOpen(true)
               }}
             >
@@ -147,7 +172,7 @@ export default function Relationships() {
                   >
                     <div>
                       <p className="font-medium">{inv.name}</p>
-                      <p className="text-sm text-muted-foreground">{inv.email}</p>
+                      <p className="text-sm text-muted-foreground">{inv.email || '-'}</p>
                     </div>
                     <Badge variant="secondary">{inv.document || '-'}</Badge>
                   </div>
@@ -167,6 +192,15 @@ export default function Relationships() {
               size="sm"
               onClick={() => {
                 setDialogType('insurer')
+                setForm({
+                  name: '',
+                  email: '',
+                  phone: '',
+                  document: '',
+                  contact_name: '',
+                  contact_email: '',
+                  contact_phone: '',
+                })
                 setDialogOpen(true)
               }}
             >
@@ -212,6 +246,7 @@ export default function Relationships() {
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 required
+                disabled={saving}
               />
             </div>
             {dialogType === 'investor' ? (
@@ -223,6 +258,7 @@ export default function Relationships() {
                     type="email"
                     value={form.email}
                     onChange={(e) => setForm({ ...form, email: e.target.value })}
+                    disabled={saving}
                   />
                 </div>
                 <div className="space-y-2">
@@ -231,6 +267,7 @@ export default function Relationships() {
                     id="phone"
                     value={form.phone}
                     onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                    disabled={saving}
                   />
                 </div>
                 <div className="space-y-2">
@@ -239,6 +276,7 @@ export default function Relationships() {
                     id="document"
                     value={form.document}
                     onChange={(e) => setForm({ ...form, document: e.target.value })}
+                    disabled={saving}
                   />
                 </div>
               </>
@@ -250,6 +288,7 @@ export default function Relationships() {
                     id="contact_name"
                     value={form.contact_name}
                     onChange={(e) => setForm({ ...form, contact_name: e.target.value })}
+                    disabled={saving}
                   />
                 </div>
                 <div className="space-y-2">
@@ -259,6 +298,7 @@ export default function Relationships() {
                     type="email"
                     value={form.contact_email}
                     onChange={(e) => setForm({ ...form, contact_email: e.target.value })}
+                    disabled={saving}
                   />
                 </div>
                 <div className="space-y-2">
@@ -267,15 +307,24 @@ export default function Relationships() {
                     id="contact_phone"
                     value={form.contact_phone}
                     onChange={(e) => setForm({ ...form, contact_phone: e.target.value })}
+                    disabled={saving}
                   />
                 </div>
               </>
             )}
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setDialogOpen(false)}
+                disabled={saving}
+              >
                 Cancelar
               </Button>
-              <Button type="submit">Salvar</Button>
+              <Button type="submit" disabled={saving}>
+                {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Salvar
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>

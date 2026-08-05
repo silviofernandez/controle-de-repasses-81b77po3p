@@ -21,9 +21,34 @@ export function extractFieldErrors(error: unknown): FieldErrors {
 }
 
 export function getErrorMessage(error: unknown): string {
-  if (!(error instanceof ClientResponseError)) {
-    return error instanceof Error ? error.message : 'An unexpected error occurred.'
+  if (error instanceof ClientResponseError) {
+    const data = error.response?.data || {}
+
+    // Check for unique constraint errors across all fields
+    const hasUniqueError = Object.values(data).some(
+      (detail: any) =>
+        detail?.code === 'validation_not_unique' ||
+        (typeof detail?.message === 'string' &&
+          (detail.message.toLowerCase().includes('unique') ||
+            detail.message.toLowerCase().includes('already exists'))),
+    )
+
+    if (hasUniqueError || error.message?.toLowerCase().includes('unique')) {
+      return 'Este e-mail ou documento já está cadastrado.'
+    }
+
+    const fieldErrors = extractFieldErrors(error)
+    const msgs = Object.values(fieldErrors)
+    if (msgs.length > 0) {
+      return msgs.join(' ')
+    }
+
+    if (error.message === 'Failed to create record.') {
+      return 'Não foi possível criar o registro. Verifique os dados fornecidos.'
+    }
+
+    return error.message || 'Falha na comunicação com o servidor.'
   }
-  const msgs = Object.values(extractFieldErrors(error))
-  return msgs.length > 0 ? msgs.join(' ') : (error.message || 'An unexpected error occurred.')
+
+  return error instanceof Error ? error.message : 'Ocorreu um erro inesperado.'
 }
