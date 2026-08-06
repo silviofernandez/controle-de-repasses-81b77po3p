@@ -14,6 +14,7 @@ import {
   Wallet,
   Send,
   Building2,
+  Receipt,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useState } from 'react'
@@ -29,6 +30,7 @@ const navItems: NavItem[] = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/folders', label: 'Pastas', icon: FolderCog },
   { to: '/payments', label: 'Repasses', icon: Wallet },
+  { to: '/receipts', label: 'Recebimentos', icon: Receipt, roles: ['gestor'] },
   { to: '/insurer-submissions', label: 'Envios à Seguradora', icon: Send, roles: ['gestor'] },
   { to: '/insurers', label: 'Seguradoras', icon: Building2, roles: ['gestor'] },
   { to: '/relationships', label: 'Relacionamentos', icon: Users },

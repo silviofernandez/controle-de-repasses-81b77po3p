@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -34,7 +34,16 @@ export function ReceiptDialog({
   const [receiptDate, setReceiptDate] = useState(new Date().toISOString().split('T')[0])
   const [saving, setSaving] = useState(false)
 
+  useEffect(() => {
+    if (open) {
+      setReceivedAmount('')
+      setReceiptDate(new Date().toISOString().split('T')[0])
+      setSaving(false)
+    }
+  }, [open])
+
   const surcharge = receivedAmount ? parseFloat(receivedAmount) - rentAmount : 0
+  const surchargePct = rentAmount > 0 && receivedAmount ? (surcharge / rentAmount) * 100 : 0
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -43,6 +52,7 @@ export function ReceiptDialog({
       await updateFolder(folderId, {
         received_amount: parseFloat(receivedAmount) || 0,
         actual_receipt_date: receiptDate,
+        status: 'recebido',
       })
       toast({
         title: 'Sucesso',
@@ -93,12 +103,19 @@ export function ReceiptDialog({
           {receivedAmount && (
             <div className="rounded-lg bg-muted p-3 text-sm">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Valor do Aluguel</span>
+                <span className="text-muted-foreground">Valor Repassado</span>
                 <span>{formatCurrency(rentAmount)}</span>
               </div>
               <div className="flex justify-between font-medium">
                 <span>Acréscimo (Sobretaxa)</span>
                 <span>{formatCurrency(surcharge)}</span>
+              </div>
+              <div className="flex justify-between font-medium text-green-600">
+                <span>% a mais</span>
+                <span>
+                  {surchargePct >= 0 ? '+' : ''}
+                  {surchargePct.toFixed(1)}%
+                </span>
               </div>
             </div>
           )}

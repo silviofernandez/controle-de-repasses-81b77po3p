@@ -2,90 +2,74 @@ routerAdd(
   'GET',
   '/backend/v1/reports/gestor',
   (e) => {
-    const auth = e.auth
+    var auth = e.auth
     if (!auth) return e.unauthorizedError('Autenticação requerida')
-    const role = auth.getString('role') || ''
-    if (role !== 'gestor') return e.forbiddenError('Acesso restrito a gestores')
 
-    const query = e.requestInfo().query || {}
-    const startDate = query.start_date || ''
-    const endDate = query.end_date || ''
+    var startDate = e.request.url.query().get('start_date') || ''
+    var endDate = e.request.url.query().get('end_date') || ''
+    var insurerId = e.request.url.query().get('insurer_id') || ''
 
-    if (!startDate || !endDate) {
-      return e.badRequestError('Período não informado')
-    }
+    var parts = []
+    if (startDate) parts.push("owner_transfer_date >= '" + startDate + "'")
+    if (endDate) parts.push("owner_transfer_date <= '" + endDate + "'")
+    if (insurerId && insurerId !== 'all') parts.push("insurer_id = '" + insurerId + "'")
+    var filter = parts.length > 0 ? parts.join(' && ') : "id != ''"
 
-    let folders = []
+    var folders = []
     try {
-      folders = $app.findRecordsByFilter(
-        'folders',
-        "due_date >= '" + startDate + "' && due_date <= '" + endDate + "'",
-        '-due_date',
-        0,
-        0,
-      )
+      folders = $app.findRecordsByFilter('folders', filter, '-owner_transfer_date', 0, 0)
     } catch (err) {
-      return e.json(200, {
-        indicators: {
-          total_paid_to_owners: 0,
-          total_received_from_insurers: 0,
-          total_investor_share: 0,
-          total_company_share: 0,
-        },
-        open_folders: [],
-        total_folders: 0,
-      })
+      folders = []
     }
 
-    let totalPaidToOwners = 0
-    let totalReceivedFromInsurers = 0
-    let totalInvestorShare = 0
-    const openFolders = []
+    var totalPaidToOwners = 0
+    var totalReceivedFromInsurers = 0
+    var totalInvestorShare = 0
+    var openFolders = []
 
-    const paidStatuses = ['transferido', 'subido', 'recebido', 'repassado']
-    const receivedStatuses = ['recebido', 'repassado']
+    for (var i = 0; i < folders.length; i++) {
+      var folder = folders[i]
+      var rentAmount = folder.get('rent_amount') || 0
+      var receivedAmount = folder.get('received_amount') || 0
+      var investorShare = folder.get('investor_share_amount') || 0
+      var status = folder.getString('status') || 'pendente'
 
-    for (const folder of folders) {
-      const rentAmount = folder.get('rent_amount') || 0
-      const investorShare = folder.get('investor_share_amount') || 0
-      const status = folder.getString('status') || 'pendente'
-
-      if (paidStatuses.indexOf(status) !== -1) {
+      if (folder.getString('owner_transfer_date')) {
         totalPaidToOwners += rentAmount
       }
 
-      if (receivedStatuses.indexOf(status) !== -1) {
-        totalReceivedFromInsurers += rentAmount
+      if (folder.getString('actual_receipt_date')) {
+        totalReceivedFromInsurers += receivedAmount
       }
 
-      if (status === 'repassado') {
-        totalInvestorShare += investorShare
-      }
+      totalInvestorShare += investorShare
 
-      if (status !== 'repassado') {
-        let insurerName = '-'
-        try {
-          const insurerId = folder.getString('insurer_id')
-          if (insurerId) {
-            const insurer = $app.findRecordById('insurers', insurerId)
-            insurerName = insurer.getString('name')
-          }
-        } catch (_) {}
+      if (status !== 'recebido') {
+        var insurerName = ''
+        var insId = folder.getString('insurer_id')
+        if (insId) {
+          try {
+            var ins = $app.findRecordById('insurers', insId)
+            insurerName = ins.getString('name')
+          } catch (_) {}
+        }
+
+        var statusLabel = status
+        if (status === 'subido') statusLabel = 'Na Seguradora'
 
         openFolders.push({
           id: folder.id,
           contract_number: folder.getString('contract_number'),
-          owner_name: folder.getString('owner_name') || '-',
+          owner_name: folder.getString('owner_name') || '',
           insurer_name: insurerName,
-          status: status,
+          status: statusLabel,
           due_date: folder.getString('due_date') || '',
           estimated_receipt_date: folder.getString('estimated_receipt_date') || '',
         })
       }
     }
 
-    let totalCompanyShare = totalReceivedFromInsurers - totalPaidToOwners - totalInvestorShare
-    if (totalCompanyShare < 0) totalCompanyShare = 0
+    var totalCompanyShare = totalReceivedFromInsurers - totalInvestorShare
 
     return e.json(200, {
       indicators: {

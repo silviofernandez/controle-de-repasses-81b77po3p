@@ -10,6 +10,7 @@ import Folders from '@/pages/Folders'
 import FolderNew from '@/pages/FolderNew'
 import FolderDetail from '@/pages/FolderDetail'
 import Payments from '@/pages/Payments'
+import Receipts from '@/pages/Receipts'
 import Relationships from '@/pages/Relationships'
 import Reports from '@/pages/Reports'
 import Settings from '@/pages/Settings'
@@ -38,6 +39,14 @@ export default function App() {
             <Route path="/folders/new" element={<FolderNew />} />
             <Route path="/folders/:id" element={<FolderDetail />} />
             <Route path="/payments" element={<Payments />} />
+            <Route
+              path="/receipts"
+              element={
+                <ProtectedRoute allowedRoles={['gestor']}>
+                  <Receipts />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="/insurer-submissions"
               element={

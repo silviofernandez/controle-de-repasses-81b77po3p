@@ -4,12 +4,20 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
   AlertCircle,
   BarChart3,
   Wallet,
   ArrowDownCircle,
   ArrowUpCircle,
   Building2,
+  FileDown,
 } from 'lucide-react'
 import { useRealtime } from '@/hooks/use-realtime'
 import { formatCurrency, formatDate } from '@/lib/format'
@@ -21,16 +29,26 @@ import {
   type GestorReport,
   type PeriodType,
 } from '@/services/reports'
+import { getInsurers, type InsurerRecord } from '@/services/insurers'
 import { cn } from '@/lib/utils'
 import { LoadingCards, LoadingRows, ErrorState, EmptyState } from '@/components/page-states'
+import { printDocument } from '@/lib/pdf-export'
 
 export default function Reports() {
   const [period, setPeriod] = useState<PeriodType>('mes')
   const [customStart, setCustomStart] = useState('')
   const [customEnd, setCustomEnd] = useState('')
+  const [insurerId, setInsurerId] = useState('all')
+  const [insurers, setInsurers] = useState<InsurerRecord[]>([])
   const [report, setReport] = useState<GestorReport | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
+
+  useEffect(() => {
+    getInsurers()
+      .then(setInsurers)
+      .catch(() => {})
+  }, [])
 
   const loadData = useCallback(async () => {
     const { start, end } = getPeriodDates(period, customStart, customEnd)
@@ -41,7 +59,7 @@ export default function Reports() {
     }
     setLoading(true)
     try {
-      const data = await getGestorReport(start, end)
+      const data = await getGestorReport(start, end, insurerId)
       setReport(data)
       setError(false)
     } catch {
@@ -49,7 +67,7 @@ export default function Reports() {
     } finally {
       setLoading(false)
     }
-  }, [period, customStart, customEnd])
+  }, [period, customStart, customEnd, insurerId])
 
   useEffect(() => {
     loadData()
@@ -117,11 +135,53 @@ export default function Reports() {
 
   const hasData = report && report.total_folders > 0
 
+  const handleExportPDF = () => {
+    const summary = indicators.map((item) => ({
+      label: item.label,
+      value: formatCurrency(item.value),
+    }))
+
+    const openFolderRows = (report?.open_folders || []).map((f) => ({
+      contrato: f.contract_number,
+      proprietario: f.owner_name || '-',
+      seguradora: f.insurer_name || '-',
+      status: f.status,
+      vencimento: formatDate(f.due_date),
+      recebimento_previsto: formatDate(f.estimated_receipt_date),
+    }))
+
+    printDocument(
+      'Relatório de Repasses',
+      [
+        {
+          title: `Pastas em Aberto (${report?.open_folders?.length || 0})`,
+          columns: [
+            { header: 'Contrato', key: 'contrato' },
+            { header: 'Proprietário', key: 'proprietario' },
+            { header: 'Seguradora', key: 'seguradora' },
+            { header: 'Status', key: 'status' },
+            { header: 'Vencimento', key: 'vencimento' },
+            { header: 'Recebimento Previsto', key: 'recebimento_previsto' },
+          ],
+          rows: openFolderRows,
+        },
+      ],
+      summary,
+    )
+  }
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-2">
-        <BarChart3 className="h-6 w-6" />
-        <h1 className="text-2xl font-bold">Relatórios</h1>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <BarChart3 className="h-6 w-6" />
+          <h1 className="text-2xl font-bold">Relatórios</h1>
+        </div>
+        {hasData && (
+          <Button variant="outline" onClick={handleExportPDF}>
+            <FileDown className="mr-2 h-4 w-4" /> Exportar PDF
+          </Button>
+        )}
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -152,6 +212,19 @@ export default function Reports() {
             />
           </div>
         )}
+        <Select value={insurerId} onValueChange={setInsurerId}>
+          <SelectTrigger className="w-48">
+            <SelectValue placeholder="Seguradora" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas Seguradoras</SelectItem>
+            {insurers.map((ins) => (
+              <SelectItem key={ins.id} value={ins.id}>
+                {ins.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {!hasData ? (

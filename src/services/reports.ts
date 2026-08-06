@@ -28,7 +28,7 @@ export interface GestorReport {
 export const STATUS_INFO: Record<string, { label: string; className: string }> = {
   pendente: { label: 'Pendente', className: 'bg-yellow-100 text-yellow-800' },
   transferido: { label: 'Transferido', className: 'bg-blue-100 text-blue-800' },
-  subido: { label: 'Subido', className: 'bg-purple-100 text-purple-800' },
+  subido: { label: 'Na Seguradora', className: 'bg-purple-100 text-purple-800' },
   recebido: { label: 'Recebido', className: 'bg-green-100 text-green-800' },
   repassado: { label: 'Repassado', className: 'bg-gray-100 text-gray-800' },
 }
@@ -81,9 +81,11 @@ export function getPeriodDates(
 export const getGestorReport = async (
   startDate: string,
   endDate: string,
+  insurerId?: string,
 ): Promise<GestorReport> => {
-  return await pb.send(
-    `/backend/v1/reports/gestor?start_date=${encodeURIComponent(startDate)}&end_date=${encodeURIComponent(endDate)}`,
-    { method: 'GET' },
-  )
+  let url = `/backend/v1/reports/gestor?start_date=${encodeURIComponent(startDate)}&end_date=${encodeURIComponent(endDate)}`
+  if (insurerId && insurerId !== 'all') {
+    url += `&insurer_id=${encodeURIComponent(insurerId)}`
+  }
+  return await pb.send(url, { method: 'GET' })
 }
