@@ -10,14 +10,14 @@ routerAdd(
     var insurerId = e.request.url.query().get('insurer_id') || ''
 
     var parts = []
-    if (startDate) parts.push("owner_transfer_date >= '" + startDate + "'")
-    if (endDate) parts.push("owner_transfer_date <= '" + endDate + "'")
+    if (startDate) parts.push("repassed_date >= '" + startDate + "'")
+    if (endDate) parts.push("repassed_date <= '" + endDate + "'")
     if (insurerId && insurerId !== 'all') parts.push("insurer_id = '" + insurerId + "'")
     var filter = parts.length > 0 ? parts.join(' && ') : "id != ''"
 
     var folders = []
     try {
-      folders = $app.findRecordsByFilter('folders', filter, '-owner_transfer_date', 0, 0)
+      folders = $app.findRecordsByFilter('folders', filter, '-repassed_date', 0, 0)
     } catch (err) {
       folders = []
     }
@@ -26,6 +26,7 @@ routerAdd(
     var totalReceivedFromInsurers = 0
     var totalInvestorShare = 0
     var openFolders = []
+    var closedFolders = []
 
     for (var i = 0; i < folders.length; i++) {
       var folder = folders[i]
@@ -44,28 +45,34 @@ routerAdd(
 
       totalInvestorShare += investorShare
 
-      if (status !== 'recebido') {
-        var insurerName = ''
-        var insId = folder.getString('insurer_id')
-        if (insId) {
-          try {
-            var ins = $app.findRecordById('insurers', insId)
-            insurerName = ins.getString('name')
-          } catch (_) {}
-        }
+      var insurerName = ''
+      var insId = folder.getString('insurer_id')
+      if (insId) {
+        try {
+          var ins = $app.findRecordById('insurers', insId)
+          insurerName = ins.getString('name')
+        } catch (_) {}
+      }
 
-        var statusLabel = status
-        if (status === 'subido') statusLabel = 'Na Seguradora'
+      var folderData = {
+        id: folder.id,
+        contract_number: folder.getString('contract_number'),
+        owner_name: folder.getString('owner_name') || '',
+        insurer_name: insurerName,
+        status: status,
+        repassed_date: folder.getString('repassed_date') || '',
+        due_date: folder.getString('due_date') || '',
+        estimated_receipt_date: folder.getString('estimated_receipt_date') || '',
+        actual_receipt_date: folder.getString('actual_receipt_date') || '',
+        investor_share_amount: investorShare,
+        received_amount: receivedAmount,
+        rent_amount: rentAmount,
+      }
 
-        openFolders.push({
-          id: folder.id,
-          contract_number: folder.getString('contract_number'),
-          owner_name: folder.getString('owner_name') || '',
-          insurer_name: insurerName,
-          status: statusLabel,
-          due_date: folder.getString('due_date') || '',
-          estimated_receipt_date: folder.getString('estimated_receipt_date') || '',
-        })
+      if (status === 'recebido') {
+        closedFolders.push(folderData)
+      } else {
+        openFolders.push(folderData)
       }
     }
 
@@ -79,6 +86,7 @@ routerAdd(
         total_company_share: totalCompanyShare,
       },
       open_folders: openFolders,
+      closed_folders: closedFolders,
       total_folders: folders.length,
     })
   },

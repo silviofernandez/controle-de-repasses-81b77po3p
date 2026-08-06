@@ -9,19 +9,25 @@ export interface ReportIndicators {
   total_company_share: number
 }
 
-export interface OpenFolder {
+export interface ReportFolder {
   id: string
   contract_number: string
   owner_name: string
   insurer_name: string
   status: string
+  repassed_date: string
   due_date: string
   estimated_receipt_date: string
+  actual_receipt_date: string
+  investor_share_amount: number
+  received_amount: number
+  rent_amount: number
 }
 
 export interface GestorReport {
   indicators: ReportIndicators
-  open_folders: OpenFolder[]
+  open_folders: ReportFolder[]
+  closed_folders: ReportFolder[]
   total_folders: number
 }
 

@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   Select,
   SelectContent,
@@ -11,7 +12,6 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import {
-  AlertCircle,
   BarChart3,
   Wallet,
   ArrowDownCircle,
@@ -28,11 +28,31 @@ import {
   PERIOD_OPTIONS,
   type GestorReport,
   type PeriodType,
+  type ReportFolder,
 } from '@/services/reports'
 import { getInsurers, type InsurerRecord } from '@/services/insurers'
 import { cn } from '@/lib/utils'
 import { LoadingCards, LoadingRows, ErrorState, EmptyState } from '@/components/page-states'
 import { printDocument } from '@/lib/pdf-export'
+
+function calcDays(repassedDate: string, receiptDate?: string): number {
+  if (!repassedDate) return 0
+  const start = new Date(repassedDate + 'T00:00:00Z')
+  const end = receiptDate ? new Date(receiptDate + 'T00:00:00Z') : new Date()
+  return Math.max(0, Math.floor((end.getTime() - start.getTime()) / 86400000))
+}
+
+function calcExpectedReceipt(repassedDate: string): string {
+  if (!repassedDate) return ''
+  const date = new Date(repassedDate + 'T00:00:00Z')
+  date.setUTCDate(date.getUTCDate() + 55)
+  return date.toISOString().split('T')[0]
+}
+
+function calcPctReceived(received: number, repassed: number): number {
+  if (repassed <= 0) return 0
+  return ((received - repassed) / repassed) * 100
+}
 
 export default function Reports() {
   const [period, setPeriod] = useState<PeriodType>('mes')
@@ -43,6 +63,7 @@ export default function Reports() {
   const [report, setReport] = useState<GestorReport | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
+  const [view, setView] = useState<'open' | 'closed'>('open')
 
   useEffect(() => {
     getInsurers()
@@ -134,6 +155,8 @@ export default function Reports() {
   ]
 
   const hasData = report && report.total_folders > 0
+  const openFolders = report?.open_folders || []
+  const closedFolders = report?.closed_folders || []
 
   const handleExportPDF = () => {
     const summary = indicators.map((item) => ({
@@ -141,32 +164,123 @@ export default function Reports() {
       value: formatCurrency(item.value),
     }))
 
-    const openFolderRows = (report?.open_folders || []).map((f) => ({
-      contrato: f.contract_number,
-      proprietario: f.owner_name || '-',
-      seguradora: f.insurer_name || '-',
-      status: f.status,
-      vencimento: formatDate(f.due_date),
-      recebimento_previsto: formatDate(f.estimated_receipt_date),
-    }))
+    if (view === 'open') {
+      const rows = openFolders.map((f) => ({
+        contrato: f.contract_number,
+        proprietario: f.owner_name || '-',
+        seguradora: f.insurer_name || '-',
+        status: STATUS_INFO[f.status]?.label || f.status,
+        repasse: formatDate(f.repassed_date),
+        dias: String(calcDays(f.repassed_date)),
+        recebimento_previsto: formatDate(calcExpectedReceipt(f.repassed_date)),
+      }))
+      printDocument(
+        'Relatório de Repasses — Pastas Abertas',
+        [
+          {
+            title: `Pastas Abertas (${openFolders.length})`,
+            columns: [
+              { header: 'Contrato', key: 'contrato' },
+              { header: 'Proprietário', key: 'proprietario' },
+              { header: 'Seguradora', key: 'seguradora' },
+              { header: 'Status', key: 'status' },
+              { header: 'Repasse', key: 'repasse' },
+              { header: 'Dias', key: 'dias' },
+              { header: 'Recebimento Previsto', key: 'recebimento_previsto' },
+            ],
+            rows,
+          },
+        ],
+        summary,
+      )
+    } else {
+      const rows = closedFolders.map((f) => {
+        const pct = calcPctReceived(f.received_amount, f.investor_share_amount)
+        return {
+          contrato: f.contract_number,
+          proprietario: f.owner_name || '-',
+          seguradora: f.insurer_name || '-',
+          status: STATUS_INFO[f.status]?.label || f.status,
+          repasse: formatDate(f.repassed_date),
+          dias: String(calcDays(f.repassed_date, f.actual_receipt_date)),
+          recebimento_previsto: formatDate(calcExpectedReceipt(f.repassed_date)),
+          data_recebimento: formatDate(f.actual_receipt_date),
+          valor_repasse: formatCurrency(f.investor_share_amount),
+          valor_recebido: formatCurrency(f.received_amount),
+          pct: `${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%`,
+        }
+      })
+      printDocument(
+        'Relatório de Repasses — Pastas Fechadas',
+        [
+          {
+            title: `Pastas Fechadas (${closedFolders.length})`,
+            columns: [
+              { header: 'Contrato', key: 'contrato' },
+              { header: 'Proprietário', key: 'proprietario' },
+              { header: 'Seguradora', key: 'seguradora' },
+              { header: 'Status', key: 'status' },
+              { header: 'Repasse', key: 'repasse' },
+              { header: 'Dias', key: 'dias' },
+              { header: 'Recebimento Previsto', key: 'recebimento_previsto' },
+              { header: 'Data Recebimento', key: 'data_recebimento' },
+              { header: 'Valor Repasse', key: 'valor_repasse' },
+              { header: 'Valor Recebido', key: 'valor_recebido' },
+              { header: '% a mais', key: 'pct' },
+            ],
+            rows,
+          },
+        ],
+        summary,
+      )
+    }
+  }
 
-    printDocument(
-      'Relatório de Repasses',
-      [
-        {
-          title: `Pastas em Aberto (${report?.open_folders?.length || 0})`,
-          columns: [
-            { header: 'Contrato', key: 'contrato' },
-            { header: 'Proprietário', key: 'proprietario' },
-            { header: 'Seguradora', key: 'seguradora' },
-            { header: 'Status', key: 'status' },
-            { header: 'Vencimento', key: 'vencimento' },
-            { header: 'Recebimento Previsto', key: 'recebimento_previsto' },
-          ],
-          rows: openFolderRows,
-        },
-      ],
-      summary,
+  const renderStatusBadge = (status: string) => (
+    <span
+      className={cn(
+        'rounded-full px-2 py-1 text-xs font-medium',
+        STATUS_INFO[status]?.className || 'bg-gray-100 text-gray-800',
+      )}
+    >
+      {STATUS_INFO[status]?.label || status}
+    </span>
+  )
+
+  const renderFolderRow = (folder: ReportFolder, isClosed: boolean) => {
+    const days = isClosed
+      ? calcDays(folder.repassed_date, folder.actual_receipt_date)
+      : calcDays(folder.repassed_date)
+    const expectedReceipt = calcExpectedReceipt(folder.repassed_date)
+    const pct = calcPctReceived(folder.received_amount, folder.investor_share_amount)
+
+    return (
+      <tr key={folder.id} className="border-b last:border-0 hover:bg-muted/50">
+        <td className="px-4 py-3 font-medium">{folder.contract_number}</td>
+        <td className="px-4 py-3">{folder.owner_name || '-'}</td>
+        <td className="px-4 py-3">{folder.insurer_name || '-'}</td>
+        <td className="px-4 py-3">{renderStatusBadge(folder.status)}</td>
+        <td className="px-4 py-3">{formatDate(folder.repassed_date)}</td>
+        <td className="px-4 py-3">{days}</td>
+        <td className="px-4 py-3">{formatDate(expectedReceipt)}</td>
+        {isClosed && (
+          <>
+            <td className="px-4 py-3">{formatDate(folder.actual_receipt_date)}</td>
+            <td className="px-4 py-3">{formatCurrency(folder.investor_share_amount)}</td>
+            <td className="px-4 py-3 font-medium text-green-600">
+              {formatCurrency(folder.received_amount)}
+            </td>
+            <td className="px-4 py-3">
+              <span
+                className={pct >= 0 ? 'text-green-600 font-medium' : 'text-red-600 font-medium'}
+              >
+                {pct >= 0 ? '+' : ''}
+                {pct.toFixed(1)}%
+              </span>
+            </td>
+          </>
+        )}
+      </tr>
     )
   }
 
@@ -248,48 +362,78 @@ export default function Reports() {
             })}
           </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Pastas em Aberto ({report?.open_folders?.length || 0})</CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="border-b bg-muted/50">
-                    <tr>
-                      <th className="px-4 py-3 text-left font-medium">Nº da Pasta</th>
-                      <th className="px-4 py-3 text-left font-medium">Proprietário</th>
-                      <th className="px-4 py-3 text-left font-medium">Seguradora</th>
-                      <th className="px-4 py-3 text-left font-medium">Status</th>
-                      <th className="px-4 py-3 text-left font-medium">Vencimento</th>
-                      <th className="px-4 py-3 text-left font-medium">Recebimento Previsto</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(report?.open_folders || []).map((folder) => (
-                      <tr key={folder.id} className="border-b last:border-0 hover:bg-muted/50">
-                        <td className="px-4 py-3 font-medium">{folder.contract_number}</td>
-                        <td className="px-4 py-3">{folder.owner_name || '-'}</td>
-                        <td className="px-4 py-3">{folder.insurer_name || '-'}</td>
-                        <td className="px-4 py-3">
-                          <span
-                            className={cn(
-                              'rounded-full px-2 py-1 text-xs font-medium',
-                              STATUS_INFO[folder.status]?.className || 'bg-gray-100 text-gray-800',
-                            )}
-                          >
-                            {STATUS_INFO[folder.status]?.label || folder.status}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3">{formatDate(folder.due_date)}</td>
-                        <td className="px-4 py-3">{formatDate(folder.estimated_receipt_date)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
+          <Tabs value={view} onValueChange={(v) => setView(v as 'open' | 'closed')}>
+            <TabsList>
+              <TabsTrigger value="open">Pastas Abertas ({openFolders.length})</TabsTrigger>
+              <TabsTrigger value="closed">Pastas Fechadas ({closedFolders.length})</TabsTrigger>
+            </TabsList>
+          </Tabs>
+
+          {view === 'open' ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>Pastas Abertas ({openFolders.length})</CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                {openFolders.length === 0 ? (
+                  <p className="py-8 text-center text-sm text-muted-foreground">
+                    Nenhuma pasta em aberto.
+                  </p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="border-b bg-muted/50">
+                        <tr>
+                          <th className="px-4 py-3 text-left font-medium">Nº da Pasta</th>
+                          <th className="px-4 py-3 text-left font-medium">Proprietário</th>
+                          <th className="px-4 py-3 text-left font-medium">Seguradora</th>
+                          <th className="px-4 py-3 text-left font-medium">Status</th>
+                          <th className="px-4 py-3 text-left font-medium">Repasse</th>
+                          <th className="px-4 py-3 text-left font-medium">Dias</th>
+                          <th className="px-4 py-3 text-left font-medium">Recebimento Previsto</th>
+                        </tr>
+                      </thead>
+                      <tbody>{openFolders.map((f) => renderFolderRow(f, false))}</tbody>
+                    </table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ) : (
+            <Card>
+              <CardHeader>
+                <CardTitle>Pastas Fechadas — Recebidas ({closedFolders.length})</CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                {closedFolders.length === 0 ? (
+                  <p className="py-8 text-center text-sm text-muted-foreground">
+                    Nenhuma pasta fechada.
+                  </p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="border-b bg-muted/50">
+                        <tr>
+                          <th className="px-4 py-3 text-left font-medium">Nº da Pasta</th>
+                          <th className="px-4 py-3 text-left font-medium">Proprietário</th>
+                          <th className="px-4 py-3 text-left font-medium">Seguradora</th>
+                          <th className="px-4 py-3 text-left font-medium">Status</th>
+                          <th className="px-4 py-3 text-left font-medium">Repasse</th>
+                          <th className="px-4 py-3 text-left font-medium">Dias</th>
+                          <th className="px-4 py-3 text-left font-medium">Recebimento Previsto</th>
+                          <th className="px-4 py-3 text-left font-medium">Data do Recebimento</th>
+                          <th className="px-4 py-3 text-left font-medium">Valor do Repasse</th>
+                          <th className="px-4 py-3 text-left font-medium">Valor Recebido</th>
+                          <th className="px-4 py-3 text-left font-medium">% a mais</th>
+                        </tr>
+                      </thead>
+                      <tbody>{closedFolders.map((f) => renderFolderRow(f, true))}</tbody>
+                    </table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
         </>
       )}
     </div>
