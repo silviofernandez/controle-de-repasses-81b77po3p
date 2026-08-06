@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { FileText, Loader2 } from 'lucide-react'
+import { getErrorMessage } from '@/lib/pocketbase/errors'
 
 export default function Login() {
   const { signIn, signUp } = useAuth()
@@ -26,7 +27,11 @@ export default function Login() {
     setLoading(false)
 
     if (result.error) {
-      setError(result.error?.message || 'Erro ao autenticar. Verifique suas credenciais.')
+      setError(
+        result.error
+          ? getErrorMessage(result.error)
+          : 'Erro ao autenticar. Verifique suas credenciais.',
+      )
     } else {
       navigate('/dashboard')
     }

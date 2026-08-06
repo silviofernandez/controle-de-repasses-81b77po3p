@@ -83,6 +83,7 @@ export const createInvestor = async (data: Partial<InvestorRecord>): Promise<Inv
         if (msg.includes('cadastrado') || msg.toLowerCase().includes('unique')) {
           throw new Error('Este e-mail ou documento já está cadastrado.')
         }
+        throw new Error(msg)
       }
     }
   }
