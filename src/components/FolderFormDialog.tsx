@@ -17,8 +17,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { InvestorCombobox } from '@/components/InvestorCombobox'
-import { getInvestors, createInvestor, type InvestorRecord } from '@/services/investors'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { getInvestors, type InvestorRecord } from '@/services/investors'
 import { getInsurers, type InsurerRecord } from '@/services/insurers'
 import {
   createFolder,
@@ -30,7 +30,7 @@ import { useToast } from '@/components/ui/use-toast'
 import { useAuth } from '@/hooks/use-auth'
 import { InlineSpinner } from '@/components/page-states'
 import { Link } from 'react-router-dom'
-import { ExternalLink } from 'lucide-react'
+import { ExternalLink, AlertCircle } from 'lucide-react'
 
 interface FolderFormDialogProps {
   open: boolean
@@ -50,32 +50,22 @@ const statusOptions: { value: FolderStatus; label: string }[] = [
 const emptyForm = {
   contract_number: '',
   owner_name: '',
-  investor_id: '',
-  is_new_investor: false,
-  new_investor_name: '',
   insurer_id: '',
-  initial_date: '',
-  due_date: '',
   owner_transfer_date: '',
-  insurer_submission_date: '',
-  estimated_receipt_date: '',
-  actual_receipt_date: '',
-  repassed_date: '',
-  rent_amount: '',
   investor_share_amount: '',
-  received_amount: '',
-  status: 'pendente' as FolderStatus,
+  status: 'repassado' as FolderStatus,
   notes: '',
 }
 
 export function FolderFormDialog({ open, onOpenChange, folder, onSaved }: FolderFormDialogProps) {
   const { user } = useAuth()
   const { toast } = useToast()
-  const [investors, setInvestors] = useState<InvestorRecord[]>([])
+  const [investor, setInvestor] = useState<InvestorRecord | null>(null)
   const [insurers, setInsurers] = useState<InsurerRecord[]>([])
   const [saving, setSaving] = useState(false)
   const [loadingDeps, setLoadingDeps] = useState(false)
   const [form, setForm] = useState(emptyForm)
+  const isEditing = !!folder
 
   useEffect(() => {
     if (!open) return
@@ -85,20 +75,11 @@ export function FolderFormDialog({ open, onOpenChange, folder, onSaved }: Folder
         ...emptyForm,
         contract_number: folder.contract_number || '',
         owner_name: folder.owner_name || '',
-        investor_id: folder.investor_id || '',
-        is_new_investor: false,
-        new_investor_name: '',
         insurer_id: folder.insurer_id || '',
-        initial_date: folder.initial_date || '',
-        due_date: folder.due_date || '',
-        owner_transfer_date: folder.owner_transfer_date || '',
-        insurer_submission_date: folder.insurer_submission_date || '',
-        estimated_receipt_date: folder.estimated_receipt_date || '',
-        actual_receipt_date: '',
-        repassed_date: folder.repassed_date || '',
-        rent_amount: folder.rent_amount?.toString() || '',
+        owner_transfer_date: folder.owner_transfer_date
+          ? folder.owner_transfer_date.split(' ')[0]
+          : '',
         investor_share_amount: folder.investor_share_amount?.toString() || '',
-        received_amount: '',
         status: folder.status || 'pendente',
         notes: folder.notes || '',
       })
@@ -111,7 +92,7 @@ export function FolderFormDialog({ open, onOpenChange, folder, onSaved }: Folder
     setLoadingDeps(true)
     try {
       const [inv, ins] = await Promise.all([getInvestors(), getInsurers()])
-      setInvestors(inv)
+      setInvestor(inv.length > 0 ? inv[0] : null)
       setInsurers(ins)
     } catch {
       toast({ title: 'Erro', description: 'Falha ao carregar dados.', variant: 'destructive' })
@@ -123,42 +104,30 @@ export function FolderFormDialog({ open, onOpenChange, folder, onSaved }: Folder
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!user?.id) return
+
+    if (!isEditing && !investor) {
+      toast({
+        title: 'Investidor não cadastrado',
+        description: 'Cadastre o investidor antes de criar uma pasta.',
+        variant: 'destructive',
+      })
+      return
+    }
+
     setSaving(true)
 
-    let finalInvestorId = form.investor_id
-    if (form.is_new_investor && form.new_investor_name) {
-      try {
-        const newInvestor = await createInvestor({ name: form.new_investor_name })
-        finalInvestorId = newInvestor.id
-      } catch {
-        toast({
-          title: 'Erro',
-          description: 'Falha ao criar investidor.',
-          variant: 'destructive',
-        })
-        setSaving(false)
-        return
-      }
-    }
+    const shareAmount = form.investor_share_amount ? parseFloat(form.investor_share_amount) : 0
 
     const data: Record<string, any> = {
       contract_number: form.contract_number,
       owner_name: form.owner_name,
-      investor_id: finalInvestorId,
+      investor_id: investor?.id || folder?.investor_id,
       insurer_id: form.insurer_id || null,
-      initial_date: form.initial_date || null,
-      due_date: form.due_date || null,
+      initial_date: form.owner_transfer_date || null,
       owner_transfer_date: form.owner_transfer_date || null,
-      insurer_submission_date: form.insurer_submission_date || null,
-      estimated_receipt_date: form.estimated_receipt_date || null,
-      actual_receipt_date: form.actual_receipt_date || null,
-      repassed_date: form.repassed_date || null,
-      rent_amount: form.rent_amount ? parseFloat(form.rent_amount) : 0,
-      investor_share_amount: form.investor_share_amount
-        ? parseFloat(form.investor_share_amount)
-        : 0,
-      received_amount: form.received_amount ? parseFloat(form.received_amount) : null,
-      status: form.status,
+      investor_share_amount: shareAmount,
+      rent_amount: shareAmount,
+      status: isEditing ? form.status : 'repassado',
       notes: form.notes,
       user_id: user.id,
     }
@@ -184,12 +153,27 @@ export function FolderFormDialog({ open, onOpenChange, folder, onSaved }: Folder
     }
   }
 
+  const noInvestor = !isEditing && !loadingDeps && !investor
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{folder ? 'Editar Pasta' : 'Nova Pasta'}</DialogTitle>
         </DialogHeader>
+
+        {noInvestor && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              Nenhum investidor cadastrado. Cadastre o investidor antes de criar uma pasta.{' '}
+              <Link to="/relationships" className="font-semibold underline">
+                Ir para cadastro
+              </Link>
+            </AlertDescription>
+          </Alert>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -211,127 +195,77 @@ export function FolderFormDialog({ open, onOpenChange, folder, onSaved }: Folder
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Investidor</Label>
-              <InvestorCombobox
-                investorId={form.investor_id}
-                isNewInvestor={form.is_new_investor}
-                newInvestorName={form.new_investor_name}
-                investors={investors}
-                loading={loadingDeps}
-                onChange={(investorId, isNew, name) =>
-                  setForm({
-                    ...form,
-                    investor_id: investorId,
-                    is_new_investor: isNew,
-                    new_investor_name: name,
-                  })
-                }
-              />
-              {form.is_new_investor && (
-                <p className="text-sm text-muted-foreground">
-                  Novo investidor será criado: <strong>{form.new_investor_name}</strong>
-                </p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label>Seguradora</Label>
-              <Select
-                value={form.insurer_id}
-                onValueChange={(v) => setForm({ ...form, insurer_id: v })}
-                disabled={loadingDeps}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={loadingDeps ? 'Carregando...' : 'Selecione...'} />
-                </SelectTrigger>
-                <SelectContent>
-                  {insurers.map((ins) => (
-                    <SelectItem key={ins.id} value={ins.id}>
-                      {ins.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Link
-                to="/insurers"
-                className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
-              >
-                <ExternalLink className="h-3 w-3" />
-                Gerenciar seguradoras
-              </Link>
-            </div>
+          <div className="space-y-2">
+            <Label>Seguradora</Label>
+            <Select
+              value={form.insurer_id}
+              onValueChange={(v) => setForm({ ...form, insurer_id: v })}
+              disabled={loadingDeps}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder={loadingDeps ? 'Carregando...' : 'Selecione...'} />
+              </SelectTrigger>
+              <SelectContent>
+                {insurers.map((ins) => (
+                  <SelectItem key={ins.id} value={ins.id}>
+                    {ins.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Link
+              to="/insurers"
+              className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+            >
+              <ExternalLink className="h-3 w-3" />
+              Gerenciar seguradoras
+            </Link>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="initial_date">Data do Vencimento</Label>
+              <Label htmlFor="owner_transfer_date">Data do Repasse para o Proprietário</Label>
               <Input
-                id="initial_date"
+                id="owner_transfer_date"
                 type="date"
-                value={form.initial_date}
-                onChange={(e) => setForm({ ...form, initial_date: e.target.value })}
+                value={form.owner_transfer_date}
+                onChange={(e) => setForm({ ...form, owner_transfer_date: e.target.value })}
                 required
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="due_date">Data do Repasse</Label>
-              <Input
-                id="due_date"
-                type="date"
-                value={form.due_date}
-                onChange={(e) => setForm({ ...form, due_date: e.target.value })}
-              />
-            </div>{' '}
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="rent_amount">Valor do Aluguel (R$)</Label>
-              <Input
-                id="rent_amount"
-                type="number"
-                step="0.01"
-                value={form.rent_amount}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    rent_amount: e.target.value,
-                    investor_share_amount: e.target.value,
-                  })
-                }
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="investor_share_amount">Repasse do Investidor (R$)</Label>
+              <Label htmlFor="investor_share_amount">Valor do Repasse (R$)</Label>
               <Input
                 id="investor_share_amount"
                 type="number"
                 step="0.01"
                 value={form.investor_share_amount}
                 onChange={(e) => setForm({ ...form, investor_share_amount: e.target.value })}
+                required
               />
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label>Status</Label>
-            <Select
-              value={form.status}
-              onValueChange={(v) => setForm({ ...form, status: v as FolderStatus })}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {statusOptions.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {isEditing && (
+            <div className="space-y-2">
+              <Label>Status</Label>
+              <Select
+                value={form.status}
+                onValueChange={(v) => setForm({ ...form, status: v as FolderStatus })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {statusOptions.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="notes">Observações</Label>
@@ -347,7 +281,7 @@ export function FolderFormDialog({ open, onOpenChange, folder, onSaved }: Folder
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={saving}>
+            <Button type="submit" disabled={saving || noInvestor}>
               {saving ? (
                 <>
                   <InlineSpinner className="mr-2" />
