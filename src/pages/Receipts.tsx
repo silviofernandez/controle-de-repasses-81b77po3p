@@ -17,6 +17,16 @@ function calcDaysOpen(transferDate: string, receiptDate?: string): number {
   return Math.max(0, Math.floor((end.getTime() - start.getTime()) / 86400000))
 }
 
+const OVERDUE_THRESHOLD = 55
+
+function isOverdue(repassedDate: string): boolean {
+  if (!repassedDate) return false
+  const start = new Date(repassedDate + 'T00:00:00Z')
+  const now = new Date()
+  const days = Math.max(0, Math.floor((now.getTime() - start.getTime()) / 86400000))
+  return days > OVERDUE_THRESHOLD
+}
+
 export default function Receipts() {
   const [folders, setFolders] = useState<FolderRecord[]>([])
   const [loading, setLoading] = useState(true)
@@ -158,7 +168,11 @@ export default function Receipts() {
                           </Badge>
                         </td>
                         <td className="px-4 py-3 text-right">
-                          <Button size="sm" onClick={() => setReceiptFolder(folder)}>
+                          <Button
+                            size="sm"
+                            variant={isOverdue(folder.repassed_date) ? 'destructive' : 'default'}
+                            onClick={() => setReceiptFolder(folder)}
+                          >
                             <Receipt className="mr-1 h-4 w-4" /> Receber
                           </Button>
                         </td>
