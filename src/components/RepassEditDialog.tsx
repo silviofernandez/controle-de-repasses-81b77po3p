@@ -13,6 +13,7 @@ import { updateFolder, type FolderRecord } from '@/services/folders'
 import { useToast } from '@/components/ui/use-toast'
 import { InlineSpinner } from '@/components/page-states'
 import { formatCurrency } from '@/lib/format'
+import { computeRepassValue } from '@/lib/repass-utils'
 
 interface RepassEditDialogProps {
   open: boolean
@@ -34,10 +35,7 @@ export function RepassEditDialog({ open, onOpenChange, folder, onSaved }: Repass
     setPunctualityDiscount(
       folder.punctuality_discount ? folder.punctuality_discount.toString() : '0',
     )
-    const rent = folder.rent_amount || 0
-    const discount = folder.punctuality_discount || 0
-    const adminFee = rent * 0.1
-    const calculated = rent - discount - adminFee
+    const calculated = computeRepassValue(folder)
     setManualRepassValue(
       folder.manual_repass_value && folder.manual_repass_value > 0
         ? folder.manual_repass_value.toString()

@@ -9,48 +9,70 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { updateFolder } from '@/services/folders'
+import { updateFolder, type FolderRecord } from '@/services/folders'
 import { useToast } from '@/components/ui/use-toast'
 import { InlineSpinner } from '@/components/page-states'
 import { formatCurrency } from '@/lib/format'
+import { computeRepassValue, computeDefaultReceivedValue } from '@/lib/repass-utils'
+import { extractFieldErrors, type FieldErrors } from '@/lib/pocketbase/errors'
 
 interface ReceiptDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  folderId: string
-  rentAmount: number
+  folder: FolderRecord | null
   onSaved?: () => void
 }
 
-export function ReceiptDialog({
-  open,
-  onOpenChange,
-  folderId,
-  rentAmount,
-  onSaved,
-}: ReceiptDialogProps) {
+export function ReceiptDialog({ open, onOpenChange, folder, onSaved }: ReceiptDialogProps) {
   const { toast } = useToast()
   const [receivedAmount, setReceivedAmount] = useState('')
   const [receiptDate, setReceiptDate] = useState(new Date().toISOString().split('T')[0])
   const [saving, setSaving] = useState(false)
+  const [validationError, setValidationError] = useState('')
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
 
   useEffect(() => {
-    if (open) {
-      setReceivedAmount('')
+    if (open && folder) {
+      const defaultVal = computeDefaultReceivedValue(folder)
+      setReceivedAmount(defaultVal.toFixed(2))
       setReceiptDate(new Date().toISOString().split('T')[0])
       setSaving(false)
+      setValidationError('')
+      setFieldErrors({})
     }
-  }, [open])
+  }, [open, folder])
 
-  const surcharge = receivedAmount ? parseFloat(receivedAmount) - rentAmount : 0
-  const surchargePct = rentAmount > 0 && receivedAmount ? (surcharge / rentAmount) * 100 : 0
+  const repassValue = folder ? computeRepassValue(folder) : 0
+  const defaultReceived = repassValue * 1.2
+  const parsedAmount = receivedAmount ? parseFloat(receivedAmount) : 0
+
+  const validate = (): boolean => {
+    setValidationError('')
+    if (!receivedAmount || receivedAmount.trim() === '') {
+      setValidationError('Informe o valor recebido.')
+      return false
+    }
+    const num = parseFloat(receivedAmount)
+    if (isNaN(num)) {
+      setValidationError('Valor inválido.')
+      return false
+    }
+    if (num <= 0) {
+      setValidationError('O valor deve ser maior que zero.')
+      return false
+    }
+    return true
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!folder) return
+    if (!validate()) return
     setSaving(true)
+    setFieldErrors({})
     try {
-      await updateFolder(folderId, {
-        received_amount: parseFloat(receivedAmount) || 0,
+      await updateFolder(folder.id, {
+        received_amount: parseFloat(receivedAmount),
         actual_receipt_date: receiptDate,
         status: 'recebido',
       })
@@ -61,6 +83,7 @@ export function ReceiptDialog({
       onOpenChange(false)
       onSaved?.()
     } catch (err: any) {
+      setFieldErrors(extractFieldErrors(err))
       toast({
         title: 'Erro',
         description: err?.message || 'Falha ao registrar recebimento.',
@@ -70,6 +93,8 @@ export function ReceiptDialog({
       setSaving(false)
     }
   }
+
+  const hasError = !!validationError || !!fieldErrors.received_amount
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -84,11 +109,24 @@ export function ReceiptDialog({
               id="received_amount"
               type="number"
               step="0.01"
+              min="0.01"
               placeholder="0,00"
               value={receivedAmount}
-              onChange={(e) => setReceivedAmount(e.target.value)}
-              required
+              onChange={(e) => {
+                setReceivedAmount(e.target.value)
+                setValidationError('')
+              }}
+              className={hasError ? 'border-destructive' : ''}
             />
+            {hasError && (
+              <p className="text-sm text-destructive">
+                {validationError || fieldErrors.received_amount}
+              </p>
+            )}
+            <p className="text-xs text-muted-foreground">
+              Valor padrão (repassado + 20%): {formatCurrency(defaultReceived)}. Edite se
+              necessário.
+            </p>
           </div>
           <div className="space-y-2">
             <Label htmlFor="receipt_date">Data do Recebimento</Label>
@@ -100,21 +138,22 @@ export function ReceiptDialog({
               required
             />
           </div>
-          {receivedAmount && (
-            <div className="rounded-lg bg-muted p-3 text-sm">
+          {parsedAmount > 0 && (
+            <div className="rounded-lg bg-muted p-3 text-sm space-y-1">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Valor Repassado</span>
-                <span>{formatCurrency(rentAmount)}</span>
+                <span>{formatCurrency(repassValue)}</span>
               </div>
-              <div className="flex justify-between font-medium">
-                <span>Acréscimo (Sobretaxa)</span>
-                <span>{formatCurrency(surcharge)}</span>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Valor Padrão Esperado (+20%)</span>
+                <span>{formatCurrency(defaultReceived)}</span>
               </div>
-              <div className="flex justify-between font-medium text-green-600">
-                <span>% a mais</span>
-                <span>
-                  {surchargePct >= 0 ? '+' : ''}
-                  {surchargePct.toFixed(1)}%
+              <div className="flex justify-between border-t pt-1 font-medium">
+                <span>Diferença</span>
+                <span
+                  className={parsedAmount >= defaultReceived ? 'text-green-600' : 'text-red-600'}
+                >
+                  {formatCurrency(parsedAmount - defaultReceived)}
                 </span>
               </div>
             </div>

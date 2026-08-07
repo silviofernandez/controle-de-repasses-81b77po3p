@@ -161,8 +161,7 @@ export default function FolderDetail() {
       <ReceiptDialog
         open={receiptOpen}
         onOpenChange={setReceiptOpen}
-        folderId={folder.id}
-        rentAmount={folder.rent_amount || 0}
+        folder={folder}
         onSaved={loadData}
       />
     </div>

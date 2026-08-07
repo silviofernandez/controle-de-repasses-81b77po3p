@@ -259,8 +259,7 @@ export default function Receipts() {
       <ReceiptDialog
         open={!!receiptFolder}
         onOpenChange={(open) => !open && setReceiptFolder(null)}
-        folderId={receiptFolder?.id || ''}
-        rentAmount={receiptFolder?.investor_share_amount || 0}
+        folder={receiptFolder}
         onSaved={loadData}
       />
     </div>
