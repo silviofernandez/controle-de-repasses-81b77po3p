@@ -1,11 +1,21 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Plus, Search, Pencil, Trash2, FolderCog } from 'lucide-react'
-import { getFolders, deleteFolder, type FolderRecord } from '@/services/folders'
+import {
+  Plus,
+  Search,
+  Pencil,
+  Trash2,
+  FolderCog,
+  ArrowUp,
+  ArrowDown,
+  ArrowUpDown,
+  Check,
+} from 'lucide-react'
+import { getFolders, deleteFolder, updateFolder, type FolderRecord } from '@/services/folders'
 import { FolderFormDialog } from '@/components/FolderFormDialog'
 import { useRealtime } from '@/hooks/use-realtime'
 import { useToast } from '@/components/ui/use-toast'
@@ -38,6 +48,8 @@ const statusVariants: Record<string, 'default' | 'secondary' | 'destructive'> = 
   repassado: 'default',
 }
 
+type SortDirection = 'asc' | 'desc' | null
+
 export default function Folders() {
   const { toast } = useToast()
   const [folders, setFolders] = useState<FolderRecord[]>([])
@@ -47,6 +59,8 @@ export default function Folders() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editFolder, setEditFolder] = useState<FolderRecord | null>(null)
   const [deleteId, setDeleteId] = useState<string | null>(null)
+  const [sortDirection, setSortDirection] = useState<SortDirection>(null)
+  const [repassingId, setRepassingId] = useState<string | null>(null)
 
   const loadData = async () => {
     setLoading(true)
@@ -92,12 +106,49 @@ export default function Folders() {
     }
   }
 
-  const filtered = folders.filter(
-    (f) =>
-      f.contract_number?.toLowerCase().includes(search.toLowerCase()) ||
-      f.owner_name?.toLowerCase().includes(search.toLowerCase()) ||
-      f.expand?.investor_id?.name?.toLowerCase().includes(search.toLowerCase()),
-  )
+  const handleRepass = async (folder: FolderRecord) => {
+    setRepassingId(folder.id)
+    try {
+      const today = new Date().toISOString().split('T')[0]
+      await updateFolder(folder.id, {
+        status: 'repassado',
+        repassed_date: today,
+      })
+      toast({ title: 'Sucesso', description: 'Pasta repassada com sucesso.' })
+      loadData()
+    } catch {
+      toast({ title: 'Erro', description: 'Falha ao repassar.', variant: 'destructive' })
+    } finally {
+      setRepassingId(null)
+    }
+  }
+
+  const toggleSort = () => {
+    setSortDirection((prev) => {
+      if (prev === null) return 'asc'
+      if (prev === 'asc') return 'desc'
+      return null
+    })
+  }
+
+  const filtered = useMemo(() => {
+    return folders.filter(
+      (f) =>
+        f.contract_number?.toLowerCase().includes(search.toLowerCase()) ||
+        f.owner_name?.toLowerCase().includes(search.toLowerCase()) ||
+        f.expand?.investor_id?.name?.toLowerCase().includes(search.toLowerCase()),
+    )
+  }, [folders, search])
+
+  const sorted = useMemo(() => {
+    if (!sortDirection) return filtered
+    return [...filtered].sort((a, b) => {
+      const dateA = a.repassed_date || ''
+      const dateB = b.repassed_date || ''
+      if (sortDirection === 'asc') return dateA.localeCompare(dateB)
+      return dateB.localeCompare(dateA)
+    })
+  }, [filtered, sortDirection])
 
   if (loading) {
     return (
@@ -161,7 +212,7 @@ export default function Folders() {
             />
           </div>
 
-          {filtered.length === 0 ? (
+          {sorted.length === 0 ? (
             <EmptyState message="Nenhuma pasta encontrada com os filtros aplicados." />
           ) : (
             <Card>
@@ -172,19 +223,31 @@ export default function Folders() {
                       <tr>
                         <th className="px-4 py-3 text-left font-medium">Contrato</th>
                         <th className="px-4 py-3 text-left font-medium">Proprietário</th>
-                        <th className="px-4 py-3 text-left font-medium">Investidor</th>
                         <th className="px-4 py-3 text-left font-medium">Valor</th>
                         <th className="px-4 py-3 text-left font-medium">Status</th>
-                        <th className="px-4 py-3 text-left font-medium">Criado</th>
-                        <th className="px-4 py-3 text-right font-medium">Ações</th>
+                        <th className="px-4 py-3 text-left font-medium">
+                          <button
+                            onClick={toggleSort}
+                            className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
+                          >
+                            Repassado
+                            {sortDirection === 'asc' ? (
+                              <ArrowUp className="h-3 w-3" />
+                            ) : sortDirection === 'desc' ? (
+                              <ArrowDown className="h-3 w-3" />
+                            ) : (
+                              <ArrowUpDown className="h-3 w-3 text-muted-foreground" />
+                            )}
+                          </button>
+                        </th>
+                        <th className="px-4 py-3 text-right font-medium">Repassar</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {filtered.map((folder) => (
+                      {sorted.map((folder) => (
                         <tr key={folder.id} className="border-b last:border-0 hover:bg-muted/50">
                           <td className="px-4 py-3 font-medium">{folder.contract_number}</td>
                           <td className="px-4 py-3">{folder.owner_name || '-'}</td>
-                          <td className="px-4 py-3">{folder.expand?.investor_id?.name || '-'}</td>
                           <td className="px-4 py-3">{formatCurrency(folder.rent_amount || 0)}</td>
                           <td className="px-4 py-3">
                             <Badge variant={statusVariants[folder.status] || 'secondary'}>
@@ -192,10 +255,25 @@ export default function Folders() {
                             </Badge>
                           </td>
                           <td className="px-4 py-3 text-muted-foreground">
-                            {formatDate(folder.created)}
+                            {folder.repassed_date ? formatDate(folder.repassed_date) : '-'}
                           </td>
                           <td className="px-4 py-3">
                             <div className="flex justify-end gap-2">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleRepass(folder)}
+                                disabled={
+                                  folder.status === 'repassado' || repassingId === folder.id
+                                }
+                                title={folder.status === 'repassado' ? 'Já repassado' : 'Repassar'}
+                              >
+                                {folder.status === 'repassado' ? (
+                                  <Check className="h-4 w-4 text-green-600" />
+                                ) : (
+                                  <Plus className="h-4 w-4" />
+                                )}
+                              </Button>
                               <Button
                                 variant="ghost"
                                 size="icon"
