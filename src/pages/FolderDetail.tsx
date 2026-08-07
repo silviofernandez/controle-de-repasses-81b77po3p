@@ -99,6 +99,9 @@ export default function FolderDetail() {
     { label: 'Recebimento Previsto', value: formatDate(folder.estimated_receipt_date) },
     { label: 'Recebimento Real', value: formatDate(folder.actual_receipt_date) },
     { label: 'Data do Repasse', value: formatDate(folder.repassed_date) },
+    ...(folder.manual_repass_value && folder.manual_repass_value > 0
+      ? [{ label: 'Valor do Repasse (Manual)', value: formatCurrency(folder.manual_repass_value) }]
+      : []),
   ]
 
   return (

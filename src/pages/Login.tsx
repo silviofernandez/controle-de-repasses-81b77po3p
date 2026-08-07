@@ -33,7 +33,8 @@ export default function Login() {
           : 'Erro ao autenticar. Verifique suas credenciais.',
       )
     } else {
-      navigate('/dashboard')
+      const role = result.role || 'gestor'
+      navigate(role === 'investidor' ? '/investor-dashboard' : '/dashboard')
     }
   }
 

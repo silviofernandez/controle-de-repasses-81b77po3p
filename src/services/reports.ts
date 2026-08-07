@@ -22,6 +22,8 @@ export interface ReportFolder {
   investor_share_amount: number
   received_amount: number
   rent_amount: number
+  manual_repass_value: number
+  punctuality_discount: number
 }
 
 export interface GestorReport {

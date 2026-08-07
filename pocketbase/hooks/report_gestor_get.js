@@ -67,6 +67,8 @@ routerAdd(
         investor_share_amount: investorShare,
         received_amount: receivedAmount,
         rent_amount: rentAmount,
+        manual_repass_value: folder.get('manual_repass_value') || 0,
+        punctuality_discount: folder.get('punctuality_discount') || 0,
       }
 
       if (status === 'recebido') {

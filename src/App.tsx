@@ -34,11 +34,46 @@ export default function App() {
             }
           >
             <Route path="/" element={<Index />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/folders" element={<Folders />} />
-            <Route path="/folders/new" element={<FolderNew />} />
-            <Route path="/folders/:id" element={<FolderDetail />} />
-            <Route path="/payments" element={<Payments />} />
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute allowedRoles={['gestor']}>
+                  <Dashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/folders"
+              element={
+                <ProtectedRoute allowedRoles={['gestor']}>
+                  <Folders />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/folders/new"
+              element={
+                <ProtectedRoute allowedRoles={['gestor']}>
+                  <FolderNew />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/folders/:id"
+              element={
+                <ProtectedRoute allowedRoles={['gestor']}>
+                  <FolderDetail />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/payments"
+              element={
+                <ProtectedRoute allowedRoles={['gestor']}>
+                  <Payments />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="/receipts"
               element={
@@ -89,7 +124,14 @@ export default function App() {
                 </ProtectedRoute>
               }
             />
-            <Route path="/investor" element={<InvestorDashboard />} />
+            <Route
+              path="/investor"
+              element={
+                <ProtectedRoute allowedRoles={['investidor']}>
+                  <InvestorDashboard />
+                </ProtectedRoute>
+              }
+            />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>

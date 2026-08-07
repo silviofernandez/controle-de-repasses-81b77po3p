@@ -15,6 +15,7 @@ import {
   Send,
   Building2,
   Receipt,
+  CalendarClock,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useState } from 'react'
@@ -27,14 +28,21 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { to: '/folders', label: 'Pastas', icon: FolderCog },
-  { to: '/payments', label: 'Repasses', icon: Wallet },
+  { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['gestor'] },
+  { to: '/folders', label: 'Pastas', icon: FolderCog, roles: ['gestor'] },
+  { to: '/payments', label: 'Repasses', icon: Wallet, roles: ['gestor'] },
   { to: '/receipts', label: 'Recebimentos', icon: Receipt, roles: ['gestor'] },
   { to: '/insurer-submissions', label: 'Envios à Seguradora', icon: Send, roles: ['gestor'] },
   { to: '/insurers', label: 'Seguradoras', icon: Building2, roles: ['gestor'] },
   { to: '/relationships', label: 'Relacionamentos', icon: Users },
   { to: '/reports', label: 'Relatórios', icon: BarChart3, roles: ['gestor'] },
+  { to: '/investor-dashboard', label: 'Meu Painel', icon: LayoutDashboard, roles: ['investidor'] },
+  {
+    to: '/investor-upcoming',
+    label: 'Próximos Repasses',
+    icon: CalendarClock,
+    roles: ['investidor'],
+  },
   { to: '/settings', label: 'Configurações', icon: Settings },
 ]
 

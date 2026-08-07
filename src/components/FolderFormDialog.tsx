@@ -53,6 +53,7 @@ const emptyForm = {
   insurer_id: '',
   owner_transfer_date: '',
   investor_share_amount: '',
+  punctuality_discount: '',
   status: 'repassado' as FolderStatus,
   notes: '',
 }
@@ -80,6 +81,7 @@ export function FolderFormDialog({ open, onOpenChange, folder, onSaved }: Folder
           ? folder.owner_transfer_date.split(' ')[0]
           : '',
         investor_share_amount: folder.investor_share_amount?.toString() || '',
+        punctuality_discount: folder.punctuality_discount?.toString() || '',
         status: folder.status || 'pendente',
         notes: folder.notes || '',
       })
@@ -117,6 +119,9 @@ export function FolderFormDialog({ open, onOpenChange, folder, onSaved }: Folder
     setSaving(true)
 
     const shareAmount = form.investor_share_amount ? parseFloat(form.investor_share_amount) : 0
+    const punctualityDiscount = form.punctuality_discount
+      ? parseFloat(form.punctuality_discount)
+      : 0
 
     const data: Record<string, any> = {
       contract_number: form.contract_number,
@@ -127,6 +132,7 @@ export function FolderFormDialog({ open, onOpenChange, folder, onSaved }: Folder
       owner_transfer_date: form.owner_transfer_date || null,
       investor_share_amount: shareAmount,
       rent_amount: shareAmount,
+      punctuality_discount: punctualityDiscount,
       status: isEditing ? form.status : 'repassado',
       notes: form.notes,
       user_id: user.id,
@@ -245,6 +251,20 @@ export function FolderFormDialog({ open, onOpenChange, folder, onSaved }: Folder
               />
             </div>
           </div>
+
+          {isEditing && (
+            <div className="space-y-2">
+              <Label>Desconto de Pontualidade (R$)</Label>
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                value={form.punctuality_discount}
+                onChange={(e) => setForm({ ...form, punctuality_discount: e.target.value })}
+                placeholder="0,00"
+              />
+            </div>
+          )}
 
           {isEditing && (
             <div className="space-y-2">

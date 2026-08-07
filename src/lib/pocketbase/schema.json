@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-07T17:30:28.038Z",
+  "generatedAt": "2026-08-07T17:59:24.199Z",
   "collections": [
     {
       "name": "users",
@@ -392,13 +392,26 @@
           "type": "number",
           "required": false,
           "system": false
+        },
+        {
+          "name": "punctuality_discount",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "manual_repass_value",
+          "type": "number",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
         "CREATE INDEX idx_folders_status ON folders (status)",
         "CREATE INDEX idx_folders_investor ON folders (investor_id)",
         "CREATE INDEX idx_folders_user ON folders (user_id)",
-        "CREATE UNIQUE INDEX idx_folders_contract ON folders (contract_number)"
+        "CREATE UNIQUE INDEX idx_folders_contract ON folders (contract_number)",
+        "CREATE INDEX `idx_folders_repassed_date` ON `folders` (repassed_date)"
       ]
     }
   ]
