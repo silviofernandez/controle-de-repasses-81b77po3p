@@ -53,7 +53,7 @@ export default function Receipts() {
   useRealtime('folders', () => loadData())
 
   const awaiting = useMemo(
-    () => folders.filter((f) => f.status === 'repassado' || f.status === 'subido'),
+    () => folders.filter((f) => ['garantido', 'em análise', 'pgto agendado'].includes(f.status)),
     [folders],
   )
   const received = useMemo(() => folders.filter((f) => f.status === 'recebido'), [folders])
@@ -164,7 +164,11 @@ export default function Receipts() {
                         </td>
                         <td className="px-4 py-3">
                           <Badge variant="secondary">
-                            {folder.status === 'subido' ? 'Na Seguradora' : 'Repassado'}
+                            {folder.status === 'em análise'
+                              ? 'Em Análise'
+                              : folder.status === 'pgto agendado'
+                                ? 'Pgto Agendado'
+                                : 'Garantido'}
                           </Badge>
                         </td>
                         <td className="px-4 py-3 text-right">

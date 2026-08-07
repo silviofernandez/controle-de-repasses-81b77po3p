@@ -41,11 +41,11 @@ interface FolderFormDialogProps {
 }
 
 const statusOptions: { value: FolderStatus; label: string }[] = [
-  { value: 'pendente', label: 'Pendente' },
-  { value: 'transferido', label: 'Transferido' },
-  { value: 'subido', label: 'Subido' },
+  { value: 'à repassar', label: 'À Repassar' },
+  { value: 'garantido', label: 'Garantido' },
   { value: 'recebido', label: 'Recebido' },
-  { value: 'repassado', label: 'Repassado' },
+  { value: 'em análise', label: 'Em Análise' },
+  { value: 'pgto agendado', label: 'Pgto Agendado' },
 ]
 
 const emptyForm = {
@@ -58,7 +58,7 @@ const emptyForm = {
   investor_share_amount: '',
   punctuality_discount: '',
   manual_repass_value: '',
-  status: 'repassado' as FolderStatus,
+  status: 'à repassar' as FolderStatus,
   notes: '',
 }
 
@@ -108,7 +108,7 @@ export function FolderFormDialog({ open, onOpenChange, folder, onSaved }: Folder
         notes: folder.notes || '',
       })
     } else {
-      setForm({ ...emptyForm, repassed_date: todayStr() })
+      setForm({ ...emptyForm })
     }
   }, [open, folder])
 
@@ -176,7 +176,7 @@ export function FolderFormDialog({ open, onOpenChange, folder, onSaved }: Folder
       rent_amount: shareAmount,
       punctuality_discount: punctualityDiscount,
       manual_repass_value: manualRepassValue,
-      status: isEditing ? form.status : 'repassado',
+      status: isEditing ? form.status : 'à repassar',
       notes: form.notes,
       user_id: user.id,
     }

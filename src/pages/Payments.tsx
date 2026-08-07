@@ -39,11 +39,11 @@ function calcAdminFee(folder: FolderRecord): number {
 }
 
 const statusLabels: Record<string, string> = {
-  pendente: 'Pendente',
-  transferido: 'Transferido',
-  subido: 'Subido',
+  'à repassar': 'À Repassar',
+  garantido: 'Garantido',
   recebido: 'Recebido',
-  repassado: 'Repassado',
+  'em análise': 'Em Análise',
+  'pgto agendado': 'Pgto Agendado',
 }
 
 export default function Payments() {
@@ -79,7 +79,7 @@ export default function Payments() {
   })
 
   const repassedFolders = useMemo(() => {
-    return folders.filter((f) => f.status === 'repassado')
+    return folders.filter((f) => f.status === 'garantido')
   }, [folders])
 
   const filtered = useMemo(() => {
@@ -117,10 +117,10 @@ export default function Payments() {
     setRemovingId(deleteId)
     try {
       await updateFolder(deleteId, {
-        status: 'pendente',
+        status: 'à repassar',
         repassed_date: null,
       })
-      toast({ title: 'Sucesso', description: 'Repasse removido. Pasta voltou para Pendente.' })
+      toast({ title: 'Sucesso', description: 'Repasse removido. Pasta voltou para À Repassar.' })
       loadData()
     } catch {
       toast({ title: 'Erro', description: 'Falha ao remover repasse.', variant: 'destructive' })

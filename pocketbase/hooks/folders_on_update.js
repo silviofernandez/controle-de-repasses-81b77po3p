@@ -46,7 +46,7 @@ onRecordUpdate((e) => {
     } catch (_) {}
   }
 
-  if (record.getString('status') === 'repassado' && !record.getString('repassed_date')) {
+  if (record.getString('status') === 'garantido' && !record.getString('repassed_date')) {
     record.set('repassed_date', fmtDate(new Date()))
   }
 

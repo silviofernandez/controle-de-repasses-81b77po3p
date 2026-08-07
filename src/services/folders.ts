@@ -1,7 +1,7 @@
 import pb from '@/lib/pocketbase/client'
 import type { RecordModel } from 'pocketbase'
 
-export type FolderStatus = 'pendente' | 'transferido' | 'subido' | 'recebido' | 'repassado'
+export type FolderStatus = 'à repassar' | 'garantido' | 'recebido' | 'em análise' | 'pgto agendado'
 
 export interface FolderRecord extends RecordModel {
   contract_number: string

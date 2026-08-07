@@ -1,5 +1,7 @@
 import { useEffect, useState, useMemo } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Card, CardContent } from '@/components/ui/card'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -33,19 +35,19 @@ import {
 } from '@/components/ui/alert-dialog'
 
 const statusLabels: Record<string, string> = {
-  pendente: 'Pendente',
-  transferido: 'Transferido',
-  subido: 'Subido',
+  'à repassar': 'À Repassar',
+  garantido: 'Garantido',
   recebido: 'Recebido',
-  repassado: 'Repassado',
+  'em análise': 'Em Análise',
+  'pgto agendado': 'Pgto Agendado',
 }
 
 const statusVariants: Record<string, 'default' | 'secondary' | 'destructive'> = {
-  pendente: 'secondary',
-  transferido: 'default',
-  subido: 'secondary',
+  'à repassar': 'secondary',
+  garantido: 'default',
   recebido: 'default',
-  repassado: 'default',
+  'em análise': 'secondary',
+  'pgto agendado': 'secondary',
 }
 
 type SortDirection = 'asc' | 'desc' | null
@@ -61,6 +63,15 @@ export default function Folders() {
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [sortDirection, setSortDirection] = useState<SortDirection>(null)
   const [repassingId, setRepassingId] = useState<string | null>(null)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const urlStatus = searchParams.get('status')
+  const [tab, setTab] = useState<'a_repassar' | 'repassadas' | 'todas'>('todas')
+
+  useEffect(() => {
+    if (urlStatus === 'à repassar') setTab('a_repassar')
+    else if (urlStatus === 'garantido') setTab('repassadas')
+    else if (urlStatus) setTab('todas')
+  }, [urlStatus])
 
   const loadData = async () => {
     setLoading(true)
@@ -111,10 +122,10 @@ export default function Folders() {
     try {
       const today = new Date().toISOString().split('T')[0]
       await updateFolder(folder.id, {
-        status: 'repassado',
+        status: 'garantido',
         repassed_date: today,
       })
-      toast({ title: 'Sucesso', description: 'Pasta repassada com sucesso.' })
+      toast({ title: 'Sucesso', description: 'Pasta garantida com sucesso.' })
       loadData()
     } catch {
       toast({ title: 'Erro', description: 'Falha ao repassar.', variant: 'destructive' })
@@ -132,13 +143,22 @@ export default function Folders() {
   }
 
   const filtered = useMemo(() => {
-    return folders.filter(
+    let result = folders
+    if (urlStatus) {
+      result = result.filter((f) => f.status === urlStatus)
+    } else if (tab === 'a_repassar') {
+      result = result.filter((f) => f.status === 'à repassar')
+    } else if (tab === 'repassadas') {
+      result = result.filter((f) => f.status !== 'à repassar')
+    }
+    const q = search.toLowerCase()
+    return result.filter(
       (f) =>
-        f.contract_number?.toLowerCase().includes(search.toLowerCase()) ||
-        f.owner_name?.toLowerCase().includes(search.toLowerCase()) ||
-        f.expand?.investor_id?.name?.toLowerCase().includes(search.toLowerCase()),
+        f.contract_number?.toLowerCase().includes(q) ||
+        f.owner_name?.toLowerCase().includes(q) ||
+        f.expand?.investor_id?.name?.toLowerCase().includes(q),
     )
-  }, [folders, search])
+  }, [folders, search, tab, urlStatus])
 
   const sorted = useMemo(() => {
     if (!sortDirection) return filtered
@@ -202,6 +222,23 @@ export default function Folders() {
         />
       ) : (
         <>
+          <Tabs
+            value={tab}
+            onValueChange={(v) => {
+              setTab(v as 'a_repassar' | 'repassadas' | 'todas')
+              if (urlStatus) {
+                searchParams.delete('status')
+                setSearchParams(searchParams)
+              }
+            }}
+          >
+            <TabsList>
+              <TabsTrigger value="a_repassar">À Repassar</TabsTrigger>
+              <TabsTrigger value="repassadas">Repassadas</TabsTrigger>
+              <TabsTrigger value="todas">Todas</TabsTrigger>
+            </TabsList>
+          </Tabs>
+
           <div className="relative">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -272,11 +309,11 @@ export default function Folders() {
                                 size="icon"
                                 onClick={() => handleRepass(folder)}
                                 disabled={
-                                  folder.status === 'repassado' || repassingId === folder.id
+                                  folder.status !== 'à repassar' || repassingId === folder.id
                                 }
-                                title={folder.status === 'repassado' ? 'Já repassado' : 'Repassar'}
+                                title={folder.status !== 'à repassar' ? 'Já garantido' : 'Garantir'}
                               >
-                                {folder.status === 'repassado' ? (
+                                {folder.status !== 'à repassar' ? (
                                   <Check className="h-4 w-4 text-green-600" />
                                 ) : (
                                   <Plus className="h-4 w-4" />

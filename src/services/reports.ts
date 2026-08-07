@@ -34,11 +34,11 @@ export interface GestorReport {
 }
 
 export const STATUS_INFO: Record<string, { label: string; className: string }> = {
-  pendente: { label: 'Pendente', className: 'bg-yellow-100 text-yellow-800' },
-  transferido: { label: 'Transferido', className: 'bg-blue-100 text-blue-800' },
-  subido: { label: 'Na Seguradora', className: 'bg-purple-100 text-purple-800' },
+  'à repassar': { label: 'À Repassar', className: 'bg-yellow-100 text-yellow-800' },
+  garantido: { label: 'Garantido', className: 'bg-blue-100 text-blue-800' },
   recebido: { label: 'Recebido', className: 'bg-green-100 text-green-800' },
-  repassado: { label: 'Repassado', className: 'bg-gray-100 text-gray-800' },
+  'em análise': { label: 'Em Análise', className: 'bg-purple-100 text-purple-800' },
+  'pgto agendado': { label: 'Pgto Agendado', className: 'bg-cyan-100 text-cyan-800' },
 }
 
 export const PERIOD_OPTIONS: { value: PeriodType; label: string }[] = [
