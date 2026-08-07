@@ -32,6 +32,8 @@ routerAdd(
       surcharge_amount: record.get('surcharge_amount') || 0,
       company_share_amount: record.get('company_share_amount') || 0,
       investor_share_amount: record.get('investor_share_amount') || 0,
+      punctuality_discount: record.get('punctuality_discount') || 0,
+      manual_repass_value: record.get('manual_repass_value') || 0,
       status: record.getString('status'),
       notes: record.getString('notes'),
       expand: {},

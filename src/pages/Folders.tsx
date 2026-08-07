@@ -224,6 +224,8 @@ export default function Folders() {
                         <th className="px-4 py-3 text-left font-medium">Contrato</th>
                         <th className="px-4 py-3 text-left font-medium">Proprietário</th>
                         <th className="px-4 py-3 text-left font-medium">Valor</th>
+                        <th className="px-4 py-3 text-left font-medium">Vencimento</th>
+                        <th className="px-4 py-3 text-left font-medium">Valor Repasse</th>
                         <th className="px-4 py-3 text-left font-medium">Status</th>
                         <th className="px-4 py-3 text-left font-medium">
                           <button
@@ -249,6 +251,12 @@ export default function Folders() {
                           <td className="px-4 py-3 font-medium">{folder.contract_number}</td>
                           <td className="px-4 py-3">{folder.owner_name || '-'}</td>
                           <td className="px-4 py-3">{formatCurrency(folder.rent_amount || 0)}</td>
+                          <td className="px-4 py-3 text-muted-foreground">
+                            {folder.due_date ? formatDate(folder.due_date) : '-'}
+                          </td>
+                          <td className="px-4 py-3">
+                            {formatCurrency(folder.manual_repass_value || 0)}
+                          </td>
                           <td className="px-4 py-3">
                             <Badge variant={statusVariants[folder.status] || 'secondary'}>
                               {statusLabels[folder.status] || folder.status}
