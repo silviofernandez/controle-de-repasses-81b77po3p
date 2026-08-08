@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-08T00:43:46.927Z",
+  "generatedAt": "2026-08-08T01:00:05.691Z",
   "collections": [
     {
       "name": "users",
@@ -413,6 +413,66 @@
         "CREATE UNIQUE INDEX idx_folders_contract ON folders (contract_number)",
         "CREATE INDEX `idx_folders_repassed_date` ON `folders` (repassed_date)"
       ]
+    },
+    {
+      "name": "folder_history",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.id != '' && (@request.auth.role = 'gestor' || folder_id.user_id = @request.auth.id)",
+        "view": "@request.auth.id != '' && (@request.auth.role = 'gestor' || folder_id.user_id = @request.auth.id)",
+        "create": "@request.auth.id != '' && @request.auth.role = 'gestor'",
+        "update": "@request.auth.id != '' && @request.auth.role = 'gestor'",
+        "delete": "@request.auth.id != '' && @request.auth.role = 'gestor'"
+      },
+      "fields": [
+        {
+          "name": "folder_id",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "folders"
+        },
+        {
+          "name": "field_name",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "old_value",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "new_value",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "changed_by",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE INDEX idx_folder_history_folder ON folder_history (folder_id)"]
     }
   ]
 }

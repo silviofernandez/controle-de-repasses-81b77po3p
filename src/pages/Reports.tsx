@@ -18,6 +18,7 @@ import {
   ArrowUpCircle,
   Building2,
   FileDown,
+  FileSpreadsheet,
 } from 'lucide-react'
 import { useRealtime } from '@/hooks/use-realtime'
 import { formatCurrency, formatDate } from '@/lib/format'
@@ -34,6 +35,7 @@ import { getInsurers, type InsurerRecord } from '@/services/insurers'
 import { cn } from '@/lib/utils'
 import { LoadingCards, LoadingRows, ErrorState, EmptyState } from '@/components/page-states'
 import { printDocument } from '@/lib/pdf-export'
+import { exportToXlsx } from '@/lib/xlsx-export'
 import { ReceiptForecast } from '@/components/ReceiptForecast'
 
 function calcDays(repassedDate: string, receiptDate?: string): number {
@@ -226,6 +228,69 @@ export default function Reports() {
     }
   }
 
+  const handleExportExcel = () => {
+    if (view === 'open') {
+      const rows = openFolders.map((f) => [
+        f.contract_number,
+        f.owner_name || '-',
+        f.insurer_name || '-',
+        STATUS_INFO[f.status]?.label || f.status,
+        formatDate(f.repassed_date),
+        calcDays(f.repassed_date),
+        formatDate(f.estimated_receipt_date),
+      ])
+      exportToXlsx(
+        'relatorio-pastas-abertas.xlsx',
+        [
+          'Contrato',
+          'Proprietário',
+          'Seguradora',
+          'Status',
+          'Repasse',
+          'Dias',
+          'Recebimento Previsto',
+        ],
+        rows,
+        { sheetName: 'Pastas Abertas' },
+      )
+    } else {
+      const rows = closedFolders.map((f) => {
+        const pct = calcPctReceived(f.received_amount, f.investor_share_amount)
+        return [
+          f.contract_number,
+          f.owner_name || '-',
+          f.insurer_name || '-',
+          STATUS_INFO[f.status]?.label || f.status,
+          formatDate(f.repassed_date),
+          calcDays(f.repassed_date, f.actual_receipt_date),
+          formatDate(f.estimated_receipt_date),
+          formatDate(f.actual_receipt_date),
+          formatCurrency(f.investor_share_amount),
+          formatCurrency(f.received_amount),
+          `${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%`,
+        ]
+      })
+      exportToXlsx(
+        'relatorio-pastas-fechadas.xlsx',
+        [
+          'Contrato',
+          'Proprietário',
+          'Seguradora',
+          'Status',
+          'Repasse',
+          'Dias',
+          'Recebimento Previsto',
+          'Data Recebimento',
+          'Valor Repasse',
+          'Valor Recebido',
+          '% a mais',
+        ],
+        rows,
+        { sheetName: 'Pastas Fechadas' },
+      )
+    }
+  }
+
   const renderStatusBadge = (status: string) => (
     <span
       className={cn(
@@ -280,9 +345,14 @@ export default function Reports() {
           <h1 className="text-2xl font-bold">Relatórios</h1>
         </div>
         {hasData && view !== 'forecast' && (
-          <Button variant="outline" onClick={handleExportPDF}>
-            <FileDown className="mr-2 h-4 w-4" /> Exportar PDF
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={handleExportPDF}>
+              <FileDown className="mr-2 h-4 w-4" /> Exportar PDF
+            </Button>
+            <Button variant="outline" onClick={handleExportExcel}>
+              <FileSpreadsheet className="mr-2 h-4 w-4" /> Exportar Excel
+            </Button>
+          </div>
         )}
       </div>
 

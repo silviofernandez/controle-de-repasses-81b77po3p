@@ -4,12 +4,15 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { ArrowLeft, Pencil, FileText, Wallet } from 'lucide-react'
+import { ArrowLeft, Pencil, FileText, Wallet, FileDown } from 'lucide-react'
 import { getFolder, type FolderRecord } from '@/services/folders'
 import { formatCurrency, formatDate } from '@/lib/format'
 import { ErrorState, EmptyState } from '@/components/page-states'
 import { FolderFormDialog } from '@/components/FolderFormDialog'
 import { ReceiptDialog } from '@/components/ReceiptDialog'
+import { printComprovante } from '@/lib/pdf-export'
+import { computeRepassValue } from '@/lib/repass-utils'
+import { FolderHistoryList } from '@/components/FolderHistoryList'
 
 const statusLabels: Record<string, string> = {
   'à repassar': 'À Repassar',
@@ -104,9 +107,25 @@ export default function FolderDetail() {
       : []),
   ]
 
+  const handleComprovante = () => {
+    printComprovante({
+      contractNumber: folder.contract_number,
+      ownerName: folder.owner_name || '',
+      insurerName: folder.expand?.insurer_id?.name || '',
+      investorName: folder.expand?.investor_id?.name || '',
+      initialDate: folder.initial_date || '',
+      dueDate: folder.due_date || '',
+      repassDate: folder.repassed_date || '',
+      status: statusLabels[folder.status] || folder.status,
+      rentAmount: folder.rent_amount || 0,
+      repassValue: computeRepassValue(folder),
+      receivedAmount: folder.received_amount || 0,
+    })
+  }
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center gap-4">
         <Button asChild variant="ghost" size="icon">
           <Link to="/folders">
             <ArrowLeft className="h-5 w-5" />
@@ -115,6 +134,9 @@ export default function FolderDetail() {
         <h1 className="text-2xl font-bold">{folder.contract_number}</h1>
         <Button variant="outline" size="sm" onClick={() => setDialogOpen(true)}>
           <Pencil className="mr-2 h-4 w-4" /> Editar
+        </Button>
+        <Button variant="outline" size="sm" onClick={handleComprovante}>
+          <FileDown className="mr-2 h-4 w-4" /> Gerar Comprovante
         </Button>
         {folder.status !== 'recebido' && (
           <Button variant="default" size="sm" onClick={() => setReceiptOpen(true)}>
@@ -164,6 +186,8 @@ export default function FolderDetail() {
         folder={folder}
         onSaved={loadData}
       />
+
+      <FolderHistoryList folderId={folder.id} />
     </div>
   )
 }
