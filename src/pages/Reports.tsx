@@ -34,19 +34,13 @@ import { getInsurers, type InsurerRecord } from '@/services/insurers'
 import { cn } from '@/lib/utils'
 import { LoadingCards, LoadingRows, ErrorState, EmptyState } from '@/components/page-states'
 import { printDocument } from '@/lib/pdf-export'
+import { ReceiptForecast } from '@/components/ReceiptForecast'
 
 function calcDays(repassedDate: string, receiptDate?: string): number {
   if (!repassedDate) return 0
   const start = new Date(repassedDate + 'T00:00:00Z')
   const end = receiptDate ? new Date(receiptDate + 'T00:00:00Z') : new Date()
   return Math.max(0, Math.floor((end.getTime() - start.getTime()) / 86400000))
-}
-
-function calcExpectedReceipt(repassedDate: string): string {
-  if (!repassedDate) return ''
-  const date = new Date(repassedDate + 'T00:00:00Z')
-  date.setUTCDate(date.getUTCDate() + 55)
-  return date.toISOString().split('T')[0]
 }
 
 function calcPctReceived(received: number, repassed: number): number {
@@ -63,7 +57,7 @@ export default function Reports() {
   const [report, setReport] = useState<GestorReport | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
-  const [view, setView] = useState<'open' | 'closed'>('open')
+  const [view, setView] = useState<'open' | 'closed' | 'forecast'>('open')
 
   useEffect(() => {
     getInsurers()
@@ -93,10 +87,9 @@ export default function Reports() {
   useEffect(() => {
     loadData()
   }, [loadData])
-
   useRealtime('folders', () => loadData())
 
-  if (loading) {
+  if (loading && view !== 'forecast') {
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-2">
@@ -113,8 +106,7 @@ export default function Reports() {
       </div>
     )
   }
-
-  if (error) {
+  if (error && view !== 'forecast') {
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-2">
@@ -153,7 +145,6 @@ export default function Reports() {
       color: 'text-orange-600',
     },
   ]
-
   const hasData = report && report.total_folders > 0
   const openFolders = report?.open_folders || []
   const closedFolders = report?.closed_folders || []
@@ -163,7 +154,6 @@ export default function Reports() {
       label: item.label,
       value: formatCurrency(item.value),
     }))
-
     if (view === 'open') {
       const rows = openFolders.map((f) => ({
         contrato: f.contract_number,
@@ -172,7 +162,7 @@ export default function Reports() {
         status: STATUS_INFO[f.status]?.label || f.status,
         repasse: formatDate(f.repassed_date),
         dias: String(calcDays(f.repassed_date)),
-        recebimento_previsto: formatDate(calcExpectedReceipt(f.repassed_date)),
+        recebimento_previsto: formatDate(f.estimated_receipt_date),
       }))
       printDocument(
         'Relatório de Repasses — Pastas Abertas',
@@ -203,7 +193,7 @@ export default function Reports() {
           status: STATUS_INFO[f.status]?.label || f.status,
           repasse: formatDate(f.repassed_date),
           dias: String(calcDays(f.repassed_date, f.actual_receipt_date)),
-          recebimento_previsto: formatDate(calcExpectedReceipt(f.repassed_date)),
+          recebimento_previsto: formatDate(f.estimated_receipt_date),
           data_recebimento: formatDate(f.actual_receipt_date),
           valor_repasse: formatCurrency(f.investor_share_amount),
           valor_recebido: formatCurrency(f.received_amount),
@@ -251,9 +241,7 @@ export default function Reports() {
     const days = isClosed
       ? calcDays(folder.repassed_date, folder.actual_receipt_date)
       : calcDays(folder.repassed_date)
-    const expectedReceipt = calcExpectedReceipt(folder.repassed_date)
     const pct = calcPctReceived(folder.received_amount, folder.investor_share_amount)
-
     return (
       <tr key={folder.id} className="border-b last:border-0 hover:bg-muted/50">
         <td className="px-4 py-3 font-medium">{folder.contract_number}</td>
@@ -262,7 +250,7 @@ export default function Reports() {
         <td className="px-4 py-3">{renderStatusBadge(folder.status)}</td>
         <td className="px-4 py-3">{formatDate(folder.repassed_date)}</td>
         <td className="px-4 py-3">{days}</td>
-        <td className="px-4 py-3">{formatDate(expectedReceipt)}</td>
+        <td className="px-4 py-3">{formatDate(folder.estimated_receipt_date)}</td>
         {isClosed && (
           <>
             <td className="px-4 py-3">{formatDate(folder.actual_receipt_date)}</td>
@@ -291,57 +279,69 @@ export default function Reports() {
           <BarChart3 className="h-6 w-6" />
           <h1 className="text-2xl font-bold">Relatórios</h1>
         </div>
-        {hasData && (
+        {hasData && view !== 'forecast' && (
           <Button variant="outline" onClick={handleExportPDF}>
             <FileDown className="mr-2 h-4 w-4" /> Exportar PDF
           </Button>
         )}
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
-        {PERIOD_OPTIONS.map((opt) => (
-          <Button
-            key={opt.value}
-            variant={period === opt.value ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setPeriod(opt.value)}
-          >
-            {opt.label}
-          </Button>
-        ))}
-        {period === 'personalizado' && (
-          <div className="flex items-center gap-2">
-            <Input
-              type="date"
-              value={customStart}
-              onChange={(e) => setCustomStart(e.target.value)}
-              className="w-40"
-            />
-            <span className="text-muted-foreground">até</span>
-            <Input
-              type="date"
-              value={customEnd}
-              onChange={(e) => setCustomEnd(e.target.value)}
-              className="w-40"
-            />
-          </div>
-        )}
-        <Select value={insurerId} onValueChange={setInsurerId}>
-          <SelectTrigger className="w-48">
-            <SelectValue placeholder="Seguradora" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todas Seguradoras</SelectItem>
-            {insurers.map((ins) => (
-              <SelectItem key={ins.id} value={ins.id}>
-                {ins.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      {view !== 'forecast' && (
+        <div className="flex flex-wrap items-center gap-2">
+          {PERIOD_OPTIONS.map((opt) => (
+            <Button
+              key={opt.value}
+              variant={period === opt.value ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setPeriod(opt.value)}
+            >
+              {opt.label}
+            </Button>
+          ))}
+          {period === 'personalizado' && (
+            <div className="flex items-center gap-2">
+              <Input
+                type="date"
+                value={customStart}
+                onChange={(e) => setCustomStart(e.target.value)}
+                className="w-40"
+              />
+              <span className="text-muted-foreground">até</span>
+              <Input
+                type="date"
+                value={customEnd}
+                onChange={(e) => setCustomEnd(e.target.value)}
+                className="w-40"
+              />
+            </div>
+          )}
+          <Select value={insurerId} onValueChange={setInsurerId}>
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="Seguradora" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas Seguradoras</SelectItem>
+              {insurers.map((ins) => (
+                <SelectItem key={ins.id} value={ins.id}>
+                  {ins.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
-      {!hasData ? (
+      <Tabs value={view} onValueChange={(v) => setView(v as 'open' | 'closed' | 'forecast')}>
+        <TabsList>
+          <TabsTrigger value="open">Pastas Abertas ({openFolders.length})</TabsTrigger>
+          <TabsTrigger value="closed">Pastas Fechadas ({closedFolders.length})</TabsTrigger>
+          <TabsTrigger value="forecast">Previsão de Recebimento</TabsTrigger>
+        </TabsList>
+      </Tabs>
+
+      {view === 'forecast' ? (
+        <ReceiptForecast />
+      ) : !hasData ? (
         <EmptyState message="Nenhum dado encontrado para o período selecionado." icon={BarChart3} />
       ) : (
         <>
@@ -361,14 +361,6 @@ export default function Reports() {
               )
             })}
           </div>
-
-          <Tabs value={view} onValueChange={(v) => setView(v as 'open' | 'closed')}>
-            <TabsList>
-              <TabsTrigger value="open">Pastas Abertas ({openFolders.length})</TabsTrigger>
-              <TabsTrigger value="closed">Pastas Fechadas ({closedFolders.length})</TabsTrigger>
-            </TabsList>
-          </Tabs>
-
           {view === 'open' ? (
             <Card>
               <CardHeader>

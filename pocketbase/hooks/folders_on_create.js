@@ -24,8 +24,6 @@ onRecordCreate((e) => {
   if (ownerTransferDate) {
     var insurerSubmissionDate = addDays(ownerTransferDate, 16)
     record.set('insurer_submission_date', insurerSubmissionDate)
-    var estimatedReceiptDate = addDays(insurerSubmissionDate, 45)
-    record.set('estimated_receipt_date', estimatedReceiptDate)
   }
 
   if (!record.getString('initial_date') && ownerTransferDate) {
@@ -39,11 +37,6 @@ onRecordCreate((e) => {
       var userId = investor.getString('user_id')
       if (userId) record.set('user_id', userId)
     } catch (_) {}
-  }
-
-  record.set('status', 'repassado')
-  if (!record.getString('repassed_date')) {
-    record.set('repassed_date', fmtDate(new Date()))
   }
 
   e.next()

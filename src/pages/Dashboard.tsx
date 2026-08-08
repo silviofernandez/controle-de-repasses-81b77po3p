@@ -11,6 +11,7 @@ import { getFolders, type FolderRecord } from '@/services/folders'
 import { useRealtime } from '@/hooks/use-realtime'
 import { formatCurrency, formatDate } from '@/lib/format'
 import { LoadingCards, ErrorState, EmptyState } from '@/components/page-states'
+import { computeRepassValue } from '@/lib/repass-utils'
 import {
   statusLabels,
   statusBadgeVariants,

@@ -12,11 +12,11 @@ import { FolderFormDialog } from '@/components/FolderFormDialog'
 import { ReceiptDialog } from '@/components/ReceiptDialog'
 
 const statusLabels: Record<string, string> = {
-  pendente: 'Pendente',
-  transferido: 'Transferido',
-  subido: 'Subido',
+  'à repassar': 'À Repassar',
+  garantido: 'Garantido',
   recebido: 'Recebido',
-  repassado: 'Repassado',
+  'em análise': 'Em Análise',
+  'pgto agendado': 'Pgto Agendado',
 }
 
 export default function FolderDetail() {
@@ -116,7 +116,7 @@ export default function FolderDetail() {
         <Button variant="outline" size="sm" onClick={() => setDialogOpen(true)}>
           <Pencil className="mr-2 h-4 w-4" /> Editar
         </Button>
-        {folder.status !== 'repassado' && (
+        {folder.status !== 'recebido' && (
           <Button variant="default" size="sm" onClick={() => setReceiptOpen(true)}>
             <Wallet className="mr-2 h-4 w-4" /> Registrar Recebimento
           </Button>
@@ -124,7 +124,7 @@ export default function FolderDetail() {
       </div>
 
       <div className="flex items-center gap-2">
-        <Badge variant={folder.status === 'repassado' ? 'default' : 'secondary'}>
+        <Badge variant={folder.status === 'recebido' ? 'default' : 'secondary'}>
           {statusLabels[folder.status] || folder.status}
         </Badge>
       </div>

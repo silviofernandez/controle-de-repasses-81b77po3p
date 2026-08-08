@@ -29,8 +29,6 @@ onRecordUpdate((e) => {
   ) {
     var insurerSubmissionDate = addDays(ownerTransferDate, 16)
     record.set('insurer_submission_date', insurerSubmissionDate)
-    var estimatedReceiptDate = addDays(insurerSubmissionDate, 45)
-    record.set('estimated_receipt_date', estimatedReceiptDate)
   }
 
   if (!record.getString('initial_date') && ownerTransferDate) {

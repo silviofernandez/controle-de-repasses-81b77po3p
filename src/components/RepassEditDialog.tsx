@@ -13,7 +13,7 @@ import { updateFolder, type FolderRecord } from '@/services/folders'
 import { useToast } from '@/components/ui/use-toast'
 import { InlineSpinner } from '@/components/page-states'
 import { formatCurrency } from '@/lib/format'
-import { computeRepassValue } from '@/lib/repass-utils'
+import { computeRepassValue, computeDefaultReceivedValue } from '@/lib/repass-utils'
 
 interface RepassEditDialogProps {
   open: boolean
@@ -25,56 +25,49 @@ interface RepassEditDialogProps {
 export function RepassEditDialog({ open, onOpenChange, folder, onSaved }: RepassEditDialogProps) {
   const { toast } = useToast()
   const [saving, setSaving] = useState(false)
-  const [repassedDate, setRepassedDate] = useState('')
-  const [punctualityDiscount, setPunctualityDiscount] = useState('')
-  const [manualRepassValue, setManualRepassValue] = useState('')
+  const [rentAmount, setRentAmount] = useState('')
+  const [repassValue, setRepassValue] = useState('')
+  const [receivedAmount, setReceivedAmount] = useState('')
 
   useEffect(() => {
     if (!open || !folder) return
-    setRepassedDate(folder.repassed_date ? folder.repassed_date.split(' ')[0] : '')
-    setPunctualityDiscount(
-      folder.punctuality_discount ? folder.punctuality_discount.toString() : '0',
-    )
-    const calculated = computeRepassValue(folder)
-    setManualRepassValue(
-      folder.manual_repass_value && folder.manual_repass_value > 0
-        ? folder.manual_repass_value.toString()
-        : calculated.toFixed(2),
+    setRentAmount((folder.rent_amount || 0).toString())
+    setRepassValue(computeRepassValue(folder).toString())
+    setReceivedAmount(
+      folder.received_amount && folder.received_amount > 0
+        ? folder.received_amount.toString()
+        : computeDefaultReceivedValue(folder).toFixed(2),
     )
   }, [open, folder])
-
-  const rentAmount = folder?.rent_amount || 0
-  const discount = punctualityDiscount ? parseFloat(punctualityDiscount) || 0 : 0
-  const adminFee = rentAmount * 0.1
-  const calculatedRepassValue = rentAmount - discount - adminFee
-  const repassValue = manualRepassValue
-    ? parseFloat(manualRepassValue) || calculatedRepassValue
-    : calculatedRepassValue
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!folder) return
     setSaving(true)
     try {
-      const manualValue = parseFloat(manualRepassValue) || 0
       await updateFolder(folder.id, {
-        repassed_date: repassedDate || null,
-        punctuality_discount: discount,
-        manual_repass_value: manualValue,
+        rent_amount: parseFloat(rentAmount) || 0,
+        manual_repass_value: parseFloat(repassValue) || 0,
+        received_amount: parseFloat(receivedAmount) || 0,
       })
-      toast({ title: 'Sucesso', description: 'Repasse atualizado com sucesso.' })
+      toast({ title: 'Sucesso', description: 'Valores atualizados com sucesso.' })
       onOpenChange(false)
       onSaved?.()
     } catch (err: any) {
       toast({
         title: 'Erro',
-        description: err?.message || 'Falha ao atualizar repasse.',
+        description: err?.message || 'Falha ao atualizar valores.',
         variant: 'destructive',
       })
     } finally {
       setSaving(false)
     }
   }
+
+  const defaultReceived = computeDefaultReceivedValue({
+    rent_amount: parseFloat(rentAmount) || 0,
+    manual_repass_value: parseFloat(repassValue) || 0,
+  })
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -84,57 +77,43 @@ export function RepassEditDialog({ open, onOpenChange, folder, onSaved }: Repass
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="repassed_date">Data do Repasse</Label>
+            <Label htmlFor="rent_amount">Valor do Aluguel (R$)</Label>
             <Input
-              id="repassed_date"
-              type="date"
-              value={repassedDate}
-              onChange={(e) => setRepassedDate(e.target.value)}
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="punctuality_discount">Desconto de Pontualidade (R$)</Label>
-            <Input
-              id="punctuality_discount"
+              id="rent_amount"
               type="number"
               step="0.01"
               min="0"
-              value={punctualityDiscount}
-              onChange={(e) => setPunctualityDiscount(e.target.value)}
+              value={rentAmount}
+              onChange={(e) => setRentAmount(e.target.value)}
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="manual_repass_value">Valor do Repasse (R$)</Label>
+            <Label htmlFor="repass_value">Valor do Repasse (R$)</Label>
             <Input
-              id="manual_repass_value"
+              id="repass_value"
               type="number"
               step="0.01"
               min="0"
-              value={manualRepassValue}
-              onChange={(e) => setManualRepassValue(e.target.value)}
+              value={repassValue}
+              onChange={(e) => setRepassValue(e.target.value)}
             />
             <p className="text-xs text-muted-foreground">
-              Valor calculado: {formatCurrency(calculatedRepassValue)}. Edite se necessário.
+              Padrão: {formatCurrency(parseFloat(rentAmount) || 0)}. Edite se necessário.
             </p>
           </div>
-          <div className="rounded-lg bg-muted/50 p-3 space-y-1 text-sm">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Valor do Aluguel</span>
-              <span>{formatCurrency(rentAmount)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Desconto de Pontualidade</span>
-              <span className="text-red-600">- {formatCurrency(discount)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Taxa de Administração (10%)</span>
-              <span className="text-red-600">- {formatCurrency(adminFee)}</span>
-            </div>
-            <div className="flex justify-between border-t pt-1 font-medium">
-              <span>Valor do Repasse</span>
-              <span className="text-green-600">{formatCurrency(repassValue)}</span>
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="received_amount">Valor Recebido (R$)</Label>
+            <Input
+              id="received_amount"
+              type="number"
+              step="0.01"
+              min="0"
+              value={receivedAmount}
+              onChange={(e) => setReceivedAmount(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              Padrão (+20%): {formatCurrency(defaultReceived)}. Edite se necessário.
+            </p>
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
@@ -143,8 +122,7 @@ export function RepassEditDialog({ open, onOpenChange, folder, onSaved }: Repass
             <Button type="submit" disabled={saving}>
               {saving ? (
                 <>
-                  <InlineSpinner className="mr-2" />
-                  Salvando...
+                  <InlineSpinner className="mr-2" /> Salvando...
                 </>
               ) : (
                 'Salvar'

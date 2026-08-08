@@ -48,20 +48,6 @@ const statusOptions: { value: FolderStatus; label: string }[] = [
   { value: 'pgto agendado', label: 'Pgto Agendado' },
 ]
 
-const emptyForm = {
-  contract_number: '',
-  owner_name: '',
-  insurer_id: '',
-  owner_transfer_date: '',
-  due_date: '',
-  repassed_date: '',
-  investor_share_amount: '',
-  punctuality_discount: '',
-  manual_repass_value: '',
-  status: 'à repassar' as FolderStatus,
-  notes: '',
-}
-
 function todayStr() {
   return new Date().toISOString().split('T')[0]
 }
@@ -75,6 +61,20 @@ function FieldError({ error }: { error?: string }) {
   return <p className="text-sm text-destructive">{error}</p>
 }
 
+const emptyForm = {
+  contract_number: '',
+  owner_name: '',
+  insurer_id: '',
+  due_date: '',
+  owner_transfer_date: '',
+  repass_value: '',
+  status: 'à repassar' as FolderStatus,
+  notes: '',
+  estimated_receipt_date: '',
+  received_amount: '',
+  actual_receipt_date: '',
+}
+
 export function FolderFormDialog({ open, onOpenChange, folder, onSaved }: FolderFormDialogProps) {
   const { user } = useAuth()
   const { toast } = useToast()
@@ -84,28 +84,27 @@ export function FolderFormDialog({ open, onOpenChange, folder, onSaved }: Folder
   const [loadingDeps, setLoadingDeps] = useState(false)
   const [form, setForm] = useState(emptyForm)
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
-  const [manualRepassTouched, setManualRepassTouched] = useState(false)
   const isEditing = !!folder
 
   useEffect(() => {
     if (!open) return
     setFieldErrors({})
-    setManualRepassTouched(false)
     loadDependencies()
     if (folder) {
+      const repassValue = folder.manual_repass_value || folder.rent_amount || 0
       setForm({
         ...emptyForm,
         contract_number: folder.contract_number || '',
         owner_name: folder.owner_name || '',
         insurer_id: folder.insurer_id || '',
-        owner_transfer_date: dateOnly(folder.owner_transfer_date),
         due_date: dateOnly(folder.due_date),
-        repassed_date: dateOnly(folder.repassed_date),
-        investor_share_amount: folder.investor_share_amount?.toString() || '',
-        punctuality_discount: folder.punctuality_discount?.toString() || '',
-        manual_repass_value: folder.manual_repass_value?.toString() || '',
-        status: folder.status || 'pendente',
+        owner_transfer_date: dateOnly(folder.owner_transfer_date),
+        repass_value: repassValue.toString(),
+        status: folder.status || 'à repassar',
         notes: folder.notes || '',
+        estimated_receipt_date: dateOnly(folder.estimated_receipt_date),
+        received_amount: folder.received_amount?.toString() || '',
+        actual_receipt_date: dateOnly(folder.actual_receipt_date),
       })
     } else {
       setForm({ ...emptyForm })
@@ -113,15 +112,16 @@ export function FolderFormDialog({ open, onOpenChange, folder, onSaved }: Folder
   }, [open, folder])
 
   useEffect(() => {
-    if (!open || manualRepassTouched) return
-    const share = form.investor_share_amount ? parseFloat(form.investor_share_amount) : 0
-    const discount = form.punctuality_discount ? parseFloat(form.punctuality_discount) : 0
-    const calculated = share - discount - share * 0.1
-    setForm((prev) => ({
-      ...prev,
-      manual_repass_value: calculated > 0 ? calculated.toFixed(2) : '0',
-    }))
-  }, [form.investor_share_amount, form.punctuality_discount, manualRepassTouched, open])
+    if (!open) return
+    if (form.status === 'recebido' && !form.received_amount) {
+      const repass = parseFloat(form.repass_value) || 0
+      setForm((prev) => ({
+        ...prev,
+        received_amount: (repass * 1.2).toFixed(2),
+        actual_receipt_date: prev.actual_receipt_date || todayStr(),
+      }))
+    }
+  }, [form.status, form.repass_value, form.received_amount, open])
 
   const loadDependencies = async () => {
     setLoadingDeps(true)
@@ -144,7 +144,6 @@ export function FolderFormDialog({ open, onOpenChange, folder, onSaved }: Folder
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!user?.id) return
-
     if (!isEditing && !investor) {
       toast({
         title: 'Investidor não cadastrado',
@@ -153,16 +152,9 @@ export function FolderFormDialog({ open, onOpenChange, folder, onSaved }: Folder
       })
       return
     }
-
     setSaving(true)
     setFieldErrors({})
-
-    const shareAmount = form.investor_share_amount ? parseFloat(form.investor_share_amount) : 0
-    const punctualityDiscount = form.punctuality_discount
-      ? parseFloat(form.punctuality_discount)
-      : 0
-    const manualRepassValue = form.manual_repass_value ? parseFloat(form.manual_repass_value) : 0
-
+    const repassValue = parseFloat(form.repass_value) || 0
     const data: Record<string, any> = {
       contract_number: form.contract_number,
       owner_name: form.owner_name,
@@ -171,16 +163,20 @@ export function FolderFormDialog({ open, onOpenChange, folder, onSaved }: Folder
       initial_date: form.owner_transfer_date || null,
       owner_transfer_date: form.owner_transfer_date || null,
       due_date: form.due_date || null,
-      repassed_date: form.repassed_date || null,
-      investor_share_amount: shareAmount,
-      rent_amount: shareAmount,
-      punctuality_discount: punctualityDiscount,
-      manual_repass_value: manualRepassValue,
+      rent_amount: repassValue,
+      investor_share_amount: repassValue,
+      manual_repass_value: repassValue,
       status: isEditing ? form.status : 'à repassar',
       notes: form.notes,
       user_id: user.id,
     }
-
+    if (isEditing && form.status === 'pgto agendado' && form.estimated_receipt_date) {
+      data.estimated_receipt_date = form.estimated_receipt_date
+    }
+    if (isEditing && form.status === 'recebido') {
+      data.received_amount = parseFloat(form.received_amount) || 0
+      data.actual_receipt_date = form.actual_receipt_date || todayStr()
+    }
     try {
       if (folder) {
         await updateFolder(folder.id, data)
@@ -193,9 +189,7 @@ export function FolderFormDialog({ open, onOpenChange, folder, onSaved }: Folder
       onSaved?.()
     } catch (err: any) {
       const errors = extractFieldErrors(err)
-      if (Object.keys(errors).length > 0) {
-        setFieldErrors(errors)
-      }
+      if (Object.keys(errors).length > 0) setFieldErrors(errors)
       toast({
         title: 'Erro',
         description: err?.message || 'Falha ao salvar pasta.',
@@ -214,7 +208,6 @@ export function FolderFormDialog({ open, onOpenChange, folder, onSaved }: Folder
         <DialogHeader>
           <DialogTitle>{folder ? 'Editar Pasta' : 'Nova Pasta'}</DialogTitle>
         </DialogHeader>
-
         {noInvestor && (
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
@@ -226,7 +219,6 @@ export function FolderFormDialog({ open, onOpenChange, folder, onSaved }: Folder
             </AlertDescription>
           </Alert>
         )}
-
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -248,7 +240,6 @@ export function FolderFormDialog({ open, onOpenChange, folder, onSaved }: Folder
               />
             </div>
           </div>
-
           <div className="space-y-2">
             <Label>Seguradora</Label>
             <Select
@@ -271,37 +262,9 @@ export function FolderFormDialog({ open, onOpenChange, folder, onSaved }: Folder
               to="/insurers"
               className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
             >
-              <ExternalLink className="h-3 w-3" />
-              Gerenciar seguradoras
+              <ExternalLink className="h-3 w-3" /> Gerenciar seguradoras
             </Link>
           </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="owner_transfer_date">Data do Repasse para o Proprietário</Label>
-              <Input
-                id="owner_transfer_date"
-                type="date"
-                value={form.owner_transfer_date}
-                onChange={(e) => set('owner_transfer_date', e.target.value)}
-                required
-              />
-              <FieldError error={fieldErrors.initial_date} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="investor_share_amount">Valor do Repasse ao Proprietário (R$)</Label>
-              <Input
-                id="investor_share_amount"
-                type="number"
-                step="0.01"
-                value={form.investor_share_amount}
-                onChange={(e) => set('investor_share_amount', e.target.value)}
-                required
-              />
-              <FieldError error={fieldErrors.investor_share_amount} />
-            </div>
-          </div>
-
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="due_date">Data do Vencimento</Label>
@@ -314,51 +277,30 @@ export function FolderFormDialog({ open, onOpenChange, folder, onSaved }: Folder
               <FieldError error={fieldErrors.due_date} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="repassed_date">Data do Repasse</Label>
+              <Label htmlFor="owner_transfer_date">Data do Repasse para o Proprietário</Label>
               <Input
-                id="repassed_date"
+                id="owner_transfer_date"
                 type="date"
-                value={form.repassed_date}
-                onChange={(e) => set('repassed_date', e.target.value)}
+                value={form.owner_transfer_date}
+                onChange={(e) => set('owner_transfer_date', e.target.value)}
+                required
               />
-              <FieldError error={fieldErrors.repassed_date} />
+              <FieldError error={fieldErrors.initial_date} />
             </div>
           </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="punctuality_discount">Desconto de Pontualidade (R$)</Label>
-              <Input
-                id="punctuality_discount"
-                type="number"
-                step="0.01"
-                min="0"
-                value={form.punctuality_discount}
-                onChange={(e) => set('punctuality_discount', e.target.value)}
-                placeholder="0,00"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="manual_repass_value">Valor do Repasse (R$)</Label>
-              <Input
-                id="manual_repass_value"
-                type="number"
-                step="0.01"
-                min="0"
-                value={form.manual_repass_value}
-                onChange={(e) => {
-                  setManualRepassTouched(true)
-                  set('manual_repass_value', e.target.value)
-                }}
-                placeholder="0,00"
-              />
-              <FieldError error={fieldErrors.manual_repass_value} />
-              <p className="text-xs text-muted-foreground">
-                Calculado: valor − desconto − 10% taxa. Editável manualmente.
-              </p>
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="repass_value">Valor do Repasse (R$)</Label>
+            <Input
+              id="repass_value"
+              type="number"
+              step="0.01"
+              min="0"
+              value={form.repass_value}
+              onChange={(e) => set('repass_value', e.target.value)}
+              required
+            />
+            <FieldError error={fieldErrors.rent_amount} />
           </div>
-
           {isEditing && (
             <div className="space-y-2">
               <Label>Status</Label>
@@ -376,7 +318,48 @@ export function FolderFormDialog({ open, onOpenChange, folder, onSaved }: Folder
               </Select>
             </div>
           )}
-
+          {isEditing && form.status === 'pgto agendado' && (
+            <div className="space-y-2">
+              <Label htmlFor="estimated_receipt_date">Data Prevista de Recebimento</Label>
+              <Input
+                id="estimated_receipt_date"
+                type="date"
+                value={form.estimated_receipt_date}
+                onChange={(e) => set('estimated_receipt_date', e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Informe a data prevista de recebimento informada pela seguradora.
+              </p>
+            </div>
+          )}
+          {isEditing && form.status === 'recebido' && (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="received_amount">Valor Recebido (R$)</Label>
+                <Input
+                  id="received_amount"
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  value={form.received_amount}
+                  onChange={(e) => set('received_amount', e.target.value)}
+                />
+                <FieldError error={fieldErrors.received_amount} />
+                <p className="text-xs text-muted-foreground">
+                  Predefinido com repasse × 1,20. Edite se necessário.
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="actual_receipt_date">Data do Recebimento</Label>
+                <Input
+                  id="actual_receipt_date"
+                  type="date"
+                  value={form.actual_receipt_date}
+                  onChange={(e) => set('actual_receipt_date', e.target.value)}
+                />
+              </div>
+            </div>
+          )}
           <div className="space-y-2">
             <Label htmlFor="notes">Observações</Label>
             <Textarea
@@ -386,7 +369,6 @@ export function FolderFormDialog({ open, onOpenChange, folder, onSaved }: Folder
               rows={3}
             />
           </div>
-
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
@@ -394,8 +376,7 @@ export function FolderFormDialog({ open, onOpenChange, folder, onSaved }: Folder
             <Button type="submit" disabled={saving || noInvestor}>
               {saving ? (
                 <>
-                  <InlineSpinner className="mr-2" />
-                  Salvando...
+                  <InlineSpinner className="mr-2" /> Salvando...
                 </>
               ) : (
                 'Salvar'
