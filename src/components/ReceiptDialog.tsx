@@ -8,6 +8,7 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { CurrencyInput } from '@/components/ui/currency-input'
 import { Label } from '@/components/ui/label'
 import { updateFolder, type FolderRecord } from '@/services/folders'
 import { useToast } from '@/components/ui/use-toast'
@@ -105,15 +106,12 @@ export function ReceiptDialog({ open, onOpenChange, folder, onSaved }: ReceiptDi
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="received_amount">Valor Recebido (R$)</Label>
-            <Input
+            <CurrencyInput
               id="received_amount"
-              type="number"
-              step="0.01"
-              min="0.01"
               placeholder="0,00"
               value={receivedAmount}
-              onChange={(e) => {
-                setReceivedAmount(e.target.value)
+              onValueChange={(v) => {
+                setReceivedAmount(v)
                 setValidationError('')
               }}
               className={hasError ? 'border-destructive' : ''}

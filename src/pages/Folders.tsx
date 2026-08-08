@@ -33,7 +33,8 @@ import { getInsurers, type InsurerRecord } from '@/services/insurers'
 import { FolderFormDialog } from '@/components/FolderFormDialog'
 import { useRealtime } from '@/hooks/use-realtime'
 import { useToast } from '@/components/ui/use-toast'
-import { formatCurrency, formatDate } from '@/lib/format'
+import { formatCurrency, formatDate, formatNumber } from '@/lib/format'
+import { CurrencyInput } from '@/components/ui/currency-input'
 import { computeRepassValue } from '@/lib/repass-utils'
 import { exportToXlsx } from '@/lib/xlsx-export'
 import { exportToCsv } from '@/lib/csv-export'
@@ -259,7 +260,7 @@ export default function Folders() {
       f.owner_name || '-',
       f.expand?.investor_id?.name || '-',
       f.expand?.insurer_id?.name || '-',
-      computeRepassValue(f),
+      formatNumber(computeRepassValue(f)),
       f.due_date ? formatDate(f.due_date) : '-',
       statusLabels[f.status] || f.status,
       f.repassed_date ? formatDate(f.repassed_date) : '-',
@@ -288,7 +289,7 @@ export default function Folders() {
       f.owner_name || '-',
       f.expand?.investor_id?.name || '-',
       f.expand?.insurer_id?.name || '-',
-      computeRepassValue(f),
+      formatNumber(computeRepassValue(f)),
       f.due_date ? formatDate(f.due_date) : '-',
       statusLabels[f.status] || f.status,
       f.repassed_date ? formatDate(f.repassed_date) : '-',
@@ -453,19 +454,17 @@ export default function Folders() {
                 <div className="space-y-1">
                   <label className="text-xs text-muted-foreground">Faixa de Valor (R$)</label>
                   <div className="flex items-center gap-1">
-                    <Input
-                      type="number"
-                      placeholder="Mín"
+                    <CurrencyInput
+                      placeholder="0,00"
                       value={filterMinValue}
-                      onChange={(e) => setFilterMinValue(e.target.value)}
+                      onValueChange={setFilterMinValue}
                       className="w-full"
                     />
                     <span className="text-muted-foreground">—</span>
-                    <Input
-                      type="number"
-                      placeholder="Máx"
+                    <CurrencyInput
+                      placeholder="0,00"
                       value={filterMaxValue}
-                      onChange={(e) => setFilterMaxValue(e.target.value)}
+                      onValueChange={setFilterMaxValue}
                       className="w-full"
                     />
                   </div>

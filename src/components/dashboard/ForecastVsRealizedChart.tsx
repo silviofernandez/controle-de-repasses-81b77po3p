@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/chart'
 import type { FolderRecord } from '@/services/folders'
 import { computeRepassValue } from '@/lib/repass-utils'
+import { formatCurrency } from '@/lib/format'
 
 const MONTH_LABELS = [
   'Jan',
@@ -96,7 +97,27 @@ export function ForecastVsRealizedChart({ folders }: { folders: FolderRecord[] }
               width={80}
               tickFormatter={(v) => `R$ ${(v / 1000).toFixed(0)}k`}
             />
-            <ChartTooltip content={<ChartTooltipContent />} />
+            <ChartTooltip
+              content={
+                <ChartTooltipContent
+                  formatter={(value: number, name: string) => {
+                    const config = chartConfig[name as keyof typeof chartConfig]
+                    return (
+                      <>
+                        <div
+                          className="h-2.5 w-2.5 rounded-sm"
+                          style={{ backgroundColor: config?.color }}
+                        />
+                        <span className="text-muted-foreground">{config?.label || name}</span>
+                        <span className="ml-auto font-medium tabular-nums">
+                          {formatCurrency(Number(value))}
+                        </span>
+                      </>
+                    )
+                  }}
+                />
+              }
+            />
             <Legend />
             <Bar dataKey="previsto" fill="var(--color-previsto)" radius={4} name="Previsto" />
             <Bar dataKey="realizado" fill="var(--color-realizado)" radius={4} name="Realizado" />

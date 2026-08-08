@@ -8,6 +8,7 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { CurrencyInput } from '@/components/ui/currency-input'
 import { Label } from '@/components/ui/label'
 import { updateFolder, type FolderRecord } from '@/services/folders'
 import { useToast } from '@/components/ui/use-toast'
@@ -78,38 +79,21 @@ export function RepassEditDialog({ open, onOpenChange, folder, onSaved }: Repass
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="rent_amount">Valor do Aluguel (R$)</Label>
-            <Input
-              id="rent_amount"
-              type="number"
-              step="0.01"
-              min="0"
-              value={rentAmount}
-              onChange={(e) => setRentAmount(e.target.value)}
-            />
+            <CurrencyInput id="rent_amount" value={rentAmount} onValueChange={setRentAmount} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="repass_value">Valor do Repasse (R$)</Label>
-            <Input
-              id="repass_value"
-              type="number"
-              step="0.01"
-              min="0"
-              value={repassValue}
-              onChange={(e) => setRepassValue(e.target.value)}
-            />
+            <CurrencyInput id="repass_value" value={repassValue} onValueChange={setRepassValue} />
             <p className="text-xs text-muted-foreground">
               Padrão: {formatCurrency(parseFloat(rentAmount) || 0)}. Edite se necessário.
             </p>
           </div>
           <div className="space-y-2">
             <Label htmlFor="received_amount">Valor Recebido (R$)</Label>
-            <Input
+            <CurrencyInput
               id="received_amount"
-              type="number"
-              step="0.01"
-              min="0"
               value={receivedAmount}
-              onChange={(e) => setReceivedAmount(e.target.value)}
+              onValueChange={setReceivedAmount}
             />
             <p className="text-xs text-muted-foreground">
               Padrão (+20%): {formatCurrency(defaultReceived)}. Edite se necessário.

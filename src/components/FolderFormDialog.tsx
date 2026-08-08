@@ -8,6 +8,7 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { CurrencyInput } from '@/components/ui/currency-input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import {
@@ -290,13 +291,10 @@ export function FolderFormDialog({ open, onOpenChange, folder, onSaved }: Folder
           </div>
           <div className="space-y-2">
             <Label htmlFor="repass_value">Valor do Repasse (R$)</Label>
-            <Input
+            <CurrencyInput
               id="repass_value"
-              type="number"
-              step="0.01"
-              min="0"
               value={form.repass_value}
-              onChange={(e) => set('repass_value', e.target.value)}
+              onValueChange={(v) => set('repass_value', v)}
               required
             />
             <FieldError error={fieldErrors.rent_amount} />
@@ -336,13 +334,10 @@ export function FolderFormDialog({ open, onOpenChange, folder, onSaved }: Folder
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="received_amount">Valor Recebido (R$)</Label>
-                <Input
+                <CurrencyInput
                   id="received_amount"
-                  type="number"
-                  step="0.01"
-                  min="0.01"
                   value={form.received_amount}
-                  onChange={(e) => set('received_amount', e.target.value)}
+                  onValueChange={(v) => set('received_amount', v)}
                 />
                 <FieldError error={fieldErrors.received_amount} />
                 <p className="text-xs text-muted-foreground">

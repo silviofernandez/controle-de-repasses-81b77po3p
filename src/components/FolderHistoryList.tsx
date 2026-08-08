@@ -9,11 +9,27 @@ import { useRealtime } from '@/hooks/use-realtime'
 const fieldLabels: Record<string, string> = {
   received_amount: 'Valor Recebido',
   estimated_receipt_date: 'Data Prevista de Recebimento',
+  rent_amount: 'Valor do Aluguel',
+  investor_share_amount: 'Repasse do Investidor',
+  manual_repass_value: 'Valor do Repasse (Manual)',
+  punctuality_discount: 'Desconto de Pontualidade',
+  status: 'Status',
+  repassed_date: 'Data do Repasse',
+  actual_receipt_date: 'Data do Recebimento',
+  owner_transfer_date: 'Transferência ao Proprietário',
 }
+
+const MONETARY_FIELDS = [
+  'received_amount',
+  'rent_amount',
+  'investor_share_amount',
+  'manual_repass_value',
+  'punctuality_discount',
+]
 
 function formatValue(field: string, value: string): string {
   if (!value) return '-'
-  if (field === 'received_amount') return formatCurrency(parseFloat(value) || 0)
+  if (MONETARY_FIELDS.includes(field)) return formatCurrency(parseFloat(value) || 0)
   return formatDate(value)
 }
 

@@ -9,7 +9,7 @@ import { getFolders, updateFolder, type FolderRecord } from '@/services/folders'
 import { RepassEditDialog } from '@/components/RepassEditDialog'
 import { useRealtime } from '@/hooks/use-realtime'
 import { useToast } from '@/components/ui/use-toast'
-import { formatCurrency, formatDate } from '@/lib/format'
+import { formatCurrency, formatDate, formatNumber } from '@/lib/format'
 import { printComprovante } from '@/lib/pdf-export'
 import { exportToCsv } from '@/lib/csv-export'
 import { LoadingRows, ErrorState, EmptyState } from '@/components/page-states'
@@ -239,7 +239,7 @@ export default function Payments() {
                 const rows = filtered.map((f) => [
                   f.contract_number,
                   f.owner_name || '-',
-                  calcRepassValue(f),
+                  formatNumber(calcRepassValue(f)),
                   f.repassed_date ? formatDate(f.repassed_date) : '-',
                   statusLabels[f.status] || f.status,
                 ])
