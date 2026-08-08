@@ -37,6 +37,7 @@ import { LoadingCards, LoadingRows, ErrorState, EmptyState } from '@/components/
 import { printDocument } from '@/lib/pdf-export'
 import { exportToXlsx } from '@/lib/xlsx-export'
 import { ReceiptForecast } from '@/components/ReceiptForecast'
+import { AnnualReportSection } from '@/components/AnnualReportSection'
 
 function calcDays(repassedDate: string, receiptDate?: string): number {
   if (!repassedDate) return 0
@@ -59,7 +60,7 @@ export default function Reports() {
   const [report, setReport] = useState<GestorReport | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
-  const [view, setView] = useState<'open' | 'closed' | 'forecast'>('open')
+  const [view, setView] = useState<'open' | 'closed' | 'forecast' | 'annual'>('open')
 
   useEffect(() => {
     getInsurers()
@@ -91,7 +92,9 @@ export default function Reports() {
   }, [loadData])
   useRealtime('folders', () => loadData())
 
-  if (loading && view !== 'forecast') {
+  const isSelfManagedView = view === 'forecast' || view === 'annual'
+
+  if (loading && !isSelfManagedView) {
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-2">
@@ -108,7 +111,7 @@ export default function Reports() {
       </div>
     )
   }
-  if (error && view !== 'forecast') {
+  if (error && !isSelfManagedView) {
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-2">
@@ -344,7 +347,7 @@ export default function Reports() {
           <BarChart3 className="h-6 w-6" />
           <h1 className="text-2xl font-bold">Relatórios</h1>
         </div>
-        {hasData && view !== 'forecast' && (
+        {hasData && !isSelfManagedView && (
           <div className="flex items-center gap-2">
             <Button variant="outline" onClick={handleExportPDF}>
               <FileDown className="mr-2 h-4 w-4" /> Exportar PDF
@@ -356,7 +359,7 @@ export default function Reports() {
         )}
       </div>
 
-      {view !== 'forecast' && (
+      {!isSelfManagedView && (
         <div className="flex flex-wrap items-center gap-2">
           {PERIOD_OPTIONS.map((opt) => (
             <Button
@@ -401,16 +404,22 @@ export default function Reports() {
         </div>
       )}
 
-      <Tabs value={view} onValueChange={(v) => setView(v as 'open' | 'closed' | 'forecast')}>
+      <Tabs
+        value={view}
+        onValueChange={(v) => setView(v as 'open' | 'closed' | 'forecast' | 'annual')}
+      >
         <TabsList>
           <TabsTrigger value="open">Pastas Abertas ({openFolders.length})</TabsTrigger>
           <TabsTrigger value="closed">Pastas Fechadas ({closedFolders.length})</TabsTrigger>
           <TabsTrigger value="forecast">Previsão de Recebimento</TabsTrigger>
+          <TabsTrigger value="annual">Relatório Anual</TabsTrigger>
         </TabsList>
       </Tabs>
 
       {view === 'forecast' ? (
         <ReceiptForecast />
+      ) : view === 'annual' ? (
+        <AnnualReportSection />
       ) : !hasData ? (
         <EmptyState message="Nenhum dado encontrado para o período selecionado." icon={BarChart3} />
       ) : (

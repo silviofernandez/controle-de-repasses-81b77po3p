@@ -12,6 +12,7 @@ import { useRealtime } from '@/hooks/use-realtime'
 import { formatCurrency, formatDate } from '@/lib/format'
 import { LoadingCards, ErrorState, EmptyState } from '@/components/page-states'
 import { computeRepassValue } from '@/lib/repass-utils'
+import { ForecastVsRealizedChart } from '@/components/dashboard/ForecastVsRealizedChart'
 import {
   statusLabels,
   statusBadgeVariants,
@@ -284,6 +285,8 @@ export default function Dashboard() {
           </div>
         </CardContent>
       </Card>
+
+      <ForecastVsRealizedChart folders={folders} />
 
       <Tabs
         value={activeTab}
