@@ -17,7 +17,46 @@ routerAdd(
       folders = []
     }
 
+    var monthNames = [
+      'Jan',
+      'Fev',
+      'Mar',
+      'Abr',
+      'Mai',
+      'Jun',
+      'Jul',
+      'Ago',
+      'Set',
+      'Out',
+      'Nov',
+      'Dez',
+    ]
     var byInvestor = {}
+
+    function ensureInvestor(id) {
+      if (!byInvestor[id]) {
+        var monthly = []
+        for (var m = 0; m < 12; m++) {
+          monthly.push({
+            month: m,
+            month_label: monthNames[m],
+            total_repasse: 0,
+            total_received: 0,
+            profit: 0,
+            investor_share: 0,
+            company_share: 0,
+          })
+        }
+        byInvestor[id] = {
+          investor_id: id,
+          investor_name: '',
+          total_repasse: 0,
+          total_received: 0,
+          folder_count: 0,
+          monthly: monthly,
+        }
+      }
+    }
 
     for (var i = 0; i < folders.length; i++) {
       var folder = folders[i]
@@ -32,15 +71,7 @@ routerAdd(
 
       if (!repassedInYear && !receivedInYear) continue
 
-      if (!byInvestor[investorId]) {
-        byInvestor[investorId] = {
-          investor_id: investorId,
-          investor_name: '',
-          total_repasse: 0,
-          total_received: 0,
-          folder_count: 0,
-        }
-      }
+      ensureInvestor(investorId)
 
       var manualRepass = folder.get('manual_repass_value') || 0
       var rentAmount = folder.get('rent_amount') || 0
@@ -50,9 +81,17 @@ routerAdd(
       if (repassedInYear) {
         byInvestor[investorId].total_repasse += repasseValue
         byInvestor[investorId].folder_count++
+        var repassedMonth = parseInt(repassedDate.substring(5, 7), 10) - 1
+        if (repassedMonth >= 0 && repassedMonth < 12) {
+          byInvestor[investorId].monthly[repassedMonth].total_repasse += repasseValue
+        }
       }
       if (receivedInYear) {
         byInvestor[investorId].total_received += receivedAmount
+        var receivedMonth = parseInt(actualReceiptDate.substring(5, 7), 10) - 1
+        if (receivedMonth >= 0 && receivedMonth < 12) {
+          byInvestor[investorId].monthly[receivedMonth].total_received += receivedAmount
+        }
       }
 
       if (!byInvestor[investorId].investor_name) {
@@ -72,10 +111,34 @@ routerAdd(
       company_share: 0,
       folder_count: 0,
     }
+    var totalsMonthly = []
+    for (var tm = 0; tm < 12; tm++) {
+      totalsMonthly.push({
+        month: tm,
+        month_label: monthNames[tm],
+        total_repasse: 0,
+        total_received: 0,
+        profit: 0,
+        investor_share: 0,
+        company_share: 0,
+      })
+    }
 
     var keys = Object.keys(byInvestor)
     for (var j = 0; j < keys.length; j++) {
       var inv = byInvestor[keys[j]]
+
+      for (var k = 0; k < 12; k++) {
+        inv.monthly[k].profit = inv.monthly[k].total_received - inv.monthly[k].total_repasse
+        inv.monthly[k].investor_share = inv.monthly[k].profit * 0.25
+        inv.monthly[k].company_share = inv.monthly[k].profit * 0.75
+        totalsMonthly[k].total_repasse += inv.monthly[k].total_repasse
+        totalsMonthly[k].total_received += inv.monthly[k].total_received
+        totalsMonthly[k].profit += inv.monthly[k].profit
+        totalsMonthly[k].investor_share += inv.monthly[k].investor_share
+        totalsMonthly[k].company_share += inv.monthly[k].company_share
+      }
+
       var profit = inv.total_received - inv.total_repasse
       var investorShare = profit * 0.25
       var companyShare = profit * 0.75
@@ -89,6 +152,7 @@ routerAdd(
         investor_share: investorShare,
         company_share: companyShare,
         folder_count: inv.folder_count,
+        monthly: inv.monthly,
       })
 
       totals.total_repasse += inv.total_repasse
@@ -103,7 +167,12 @@ routerAdd(
       return b.total_repasse - a.total_repasse
     })
 
-    return e.json(200, { year: year, investors: investors, totals: totals })
+    return e.json(200, {
+      year: year,
+      investors: investors,
+      totals: totals,
+      totals_monthly: totalsMonthly,
+    })
   },
   $apis.requireAuth(),
 )

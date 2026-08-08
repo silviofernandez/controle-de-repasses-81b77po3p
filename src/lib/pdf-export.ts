@@ -1,3 +1,5 @@
+import type { AnnualReport } from '@/services/annual-report'
+
 interface PdfColumn {
   header: string
   key: string
@@ -128,6 +130,102 @@ td { padding:8px 10px; border-bottom:1px solid #eee; } tr:nth-child(even) td { b
 .footer { margin-top:32px; font-size:11px; color:#aaa; text-align:center; }
 @media print { body { padding:16px; } .no-print { display:none; } }</style></head><body>
 <h1>${title}</h1><p class="date">Gerado em ${now}</p>${summaryHTML}${tableHTML}
+<div class="footer">Controle de Repasses — Documento gerado automaticamente</div>
+<script>window.onload=function(){window.print();}</script></body></html>`)
+  win.document.close()
+}
+
+export function printAnnualReport(report: AnnualReport) {
+  const win = window.open('', '_blank', 'width=1000,height=800')
+  if (!win) {
+    alert('Por favor, permita popups para exportar o PDF.')
+    return
+  }
+
+  const fmt = (v: number) =>
+    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0)
+  const now = new Date().toLocaleDateString('pt-BR')
+
+  const summaryHeader = [
+    'Investidor',
+    'Total Repasse',
+    'Total Recebido',
+    'Lucro (20%)',
+    'Investidor (5%)',
+    'Imobiliária (15%)',
+    'Pastas',
+  ]
+  const summaryRows = report.investors.map((inv) => [
+    inv.investor_name,
+    fmt(inv.total_repasse),
+    fmt(inv.total_received),
+    fmt(inv.profit),
+    fmt(inv.investor_share),
+    fmt(inv.company_share),
+    String(inv.folder_count),
+  ])
+  summaryRows.push([
+    'TOTAL',
+    fmt(report.totals.total_repasse),
+    fmt(report.totals.total_received),
+    fmt(report.totals.profit),
+    fmt(report.totals.investor_share),
+    fmt(report.totals.company_share),
+    String(report.totals.folder_count),
+  ])
+
+  const summaryTable = `<table><thead><tr>${summaryHeader.map((h) => `<th>${h}</th>`).join('')}</tr></thead><tbody>${summaryRows.map((r) => `<tr>${r.map((c) => `<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table>`
+
+  const monthlyHeader = [
+    'Mês',
+    'Total Repasse',
+    'Total Recebido',
+    'Lucro (20%)',
+    'Investidor (5%)',
+    'Imobiliária (15%)',
+  ]
+
+  const monthlySection = report.investors
+    .map((inv) => {
+      const rows = inv.monthly.map((m) => [
+        m.month_label,
+        fmt(m.total_repasse),
+        fmt(m.total_received),
+        fmt(m.profit),
+        fmt(m.investor_share),
+        fmt(m.company_share),
+      ])
+      rows.push([
+        'Total',
+        fmt(inv.total_repasse),
+        fmt(inv.total_received),
+        fmt(inv.profit),
+        fmt(inv.investor_share),
+        fmt(inv.company_share),
+      ])
+      return `<h2>${inv.investor_name}</h2><table><thead><tr>${monthlyHeader.map((h) => `<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.map((r) => `<tr>${r.map((c) => `<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table>`
+    })
+    .join('')
+
+  win.document.write(`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
+<title>Relatório Anual ${report.year}</title>
+<style>* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Segoe UI',Arial,sans-serif; padding:32px; color:#1a1a1a; }
+h1 { font-size:22px; margin-bottom:4px; }
+.date { font-size:12px; color:#888; margin-bottom:24px; }
+h2 { font-size:16px; margin:24px 0 8px; }
+table { width:100%; border-collapse:collapse; margin-bottom:16px; font-size:11px; }
+th { background:#f0f0f0; text-align:left; padding:8px 10px; border-bottom:2px solid #ddd; font-weight:600; }
+td { padding:8px 10px; border-bottom:1px solid #eee; }
+tr:nth-child(even) td { background:#fafafa; }
+.footer { margin-top:32px; font-size:11px; color:#aaa; text-align:center; }
+@media print { body { padding:16px; } }</style></head><body>
+<h1>Relatório Anual Consolidado — ${report.year}</h1>
+<p class="date">Gerado em ${now}</p>
+<h2>Resumo Anual por Investidor</h2>
+${summaryTable}
+<h2>Comparativo Mensal por Investidor</h2>
+${monthlySection}
 <div class="footer">Controle de Repasses — Documento gerado automaticamente</div>
 <script>window.onload=function(){window.print();}</script></body></html>`)
   win.document.close()

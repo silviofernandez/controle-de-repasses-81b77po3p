@@ -9,13 +9,15 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
-import { FileDown, FileSpreadsheet } from 'lucide-react'
+import { FileDown, FileSpreadsheet, FileText } from 'lucide-react'
 import { getAnnualReport, type AnnualReport as AnnualReportType } from '@/services/annual-report'
 import { useRealtime } from '@/hooks/use-realtime'
 import { formatCurrency } from '@/lib/format'
 import { exportToXlsx } from '@/lib/xlsx-export'
 import { exportToCsv } from '@/lib/csv-export'
+import { printAnnualReport } from '@/lib/pdf-export'
 import { LoadingRows, ErrorState, EmptyState } from '@/components/page-states'
+import { AnnualReportMonthly } from '@/components/AnnualReportMonthly'
 
 function getAvailableYears(): number[] {
   const current = new Date().getFullYear()
@@ -47,6 +49,16 @@ export function AnnualReportSection() {
 
   useRealtime('folders', () => loadData())
 
+  const headers = [
+    'Investidor',
+    'Total Repasse',
+    'Total Recebido',
+    'Lucro (20%)',
+    'Investidor (5%)',
+    'Imobiliária (15%)',
+    'Pastas',
+  ]
+
   const buildRows = () => {
     if (!report) return []
     const rows = report.investors.map((inv) => [
@@ -70,16 +82,6 @@ export function AnnualReportSection() {
     return rows
   }
 
-  const headers = [
-    'Investidor',
-    'Total Repasse',
-    'Total Recebido',
-    'Lucro (20%)',
-    'Investidor (5%)',
-    'Imobiliária (15%)',
-    'Pastas',
-  ]
-
   const handleExportExcel = () => {
     if (!report) return
     exportToXlsx(`relatorio-anual-${report.year}.xlsx`, headers, buildRows(), {
@@ -90,6 +92,11 @@ export function AnnualReportSection() {
   const handleExportCsv = () => {
     if (!report) return
     exportToCsv(`relatorio-anual-${report.year}.csv`, headers, buildRows())
+  }
+
+  const handleExportPDF = () => {
+    if (!report) return
+    printAnnualReport(report)
   }
 
   if (loading) {
@@ -125,27 +132,34 @@ export function AnnualReportSection() {
     )
   }
 
+  const yearSelect = (
+    <Select value={String(year)} onValueChange={(v) => setYear(parseInt(v, 10))}>
+      <SelectTrigger className="w-32">
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {getAvailableYears().map((y) => (
+          <SelectItem key={y} value={String(y)}>
+            {y}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  )
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <Select value={String(year)} onValueChange={(v) => setYear(parseInt(v, 10))}>
-          <SelectTrigger className="w-32">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {getAvailableYears().map((y) => (
-              <SelectItem key={y} value={String(y)}>
-                {y}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        {yearSelect}
         <div className="flex items-center gap-2">
           <Button variant="outline" onClick={handleExportExcel}>
             <FileSpreadsheet className="mr-2 h-4 w-4" /> Exportar Excel
           </Button>
           <Button variant="outline" onClick={handleExportCsv}>
             <FileDown className="mr-2 h-4 w-4" /> Exportar CSV
+          </Button>
+          <Button variant="outline" onClick={handleExportPDF}>
+            <FileText className="mr-2 h-4 w-4" /> Exportar PDF
           </Button>
         </div>
       </div>
@@ -210,6 +224,8 @@ export function AnnualReportSection() {
           </div>
         </CardContent>
       </Card>
+
+      <AnnualReportMonthly report={report} />
     </div>
   )
 }

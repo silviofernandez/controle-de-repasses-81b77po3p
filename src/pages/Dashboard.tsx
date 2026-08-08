@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Skeleton } from '@/components/ui/skeleton'
-import { FolderCog, Wallet, Plus, TrendingUp, X } from 'lucide-react'
+import { FolderCog, Wallet, Plus, TrendingUp, X, AlertTriangle } from 'lucide-react'
 import { getFolders, type FolderRecord } from '@/services/folders'
 import { useRealtime } from '@/hooks/use-realtime'
 import { formatCurrency, formatDate } from '@/lib/format'
@@ -115,6 +115,16 @@ export default function Dashboard() {
     if (activeTab === 'a_repassar') return aRepassar
     return folders.filter((f) => f.status !== 'à repassar')
   }, [folders, activeTab, statusFilter, aRepassar])
+
+  const overdueFolders = useMemo(() => {
+    const today = new Date().toISOString().split('T')[0]
+    return folders.filter(
+      (f) =>
+        f.status === 'pgto agendado' &&
+        f.estimated_receipt_date &&
+        f.estimated_receipt_date < today,
+    )
+  }, [folders])
 
   if (loading) {
     return (
@@ -285,6 +295,53 @@ export default function Dashboard() {
           </div>
         </CardContent>
       </Card>
+
+      {overdueFolders.length > 0 && (
+        <Card className="border-destructive/30 bg-destructive/5">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              <CardTitle className="text-destructive">
+                Recebimentos em Atraso ({overdueFolders.length})
+              </CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="border-b bg-muted/50">
+                  <tr>
+                    <th className="px-4 py-2 text-left font-medium">Contrato</th>
+                    <th className="px-4 py-2 text-left font-medium">Proprietário</th>
+                    <th className="px-4 py-2 text-left font-medium">Seguradora</th>
+                    <th className="px-4 py-2 text-left font-medium">Data Prevista</th>
+                    <th className="px-4 py-2 text-left font-medium">Valor Previsto</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {overdueFolders.map((f) => (
+                    <tr key={f.id} className="border-b last:border-0 hover:bg-muted/50">
+                      <td className="px-4 py-2 font-medium">
+                        <Link to={`/folders/${f.id}`} className="hover:underline">
+                          {f.contract_number}
+                        </Link>
+                      </td>
+                      <td className="px-4 py-2">{f.owner_name || '-'}</td>
+                      <td className="px-4 py-2">{f.expand?.insurer_id?.name || '-'}</td>
+                      <td className="px-4 py-2 text-red-600 font-medium">
+                        {formatDate(f.estimated_receipt_date)}
+                      </td>
+                      <td className="px-4 py-2 font-medium">
+                        {formatCurrency(computeRepassValue(f) * 1.2)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <ForecastVsRealizedChart folders={folders} />
 
