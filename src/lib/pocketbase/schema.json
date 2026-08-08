@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-07T20:25:54.706Z",
+  "generatedAt": "2026-08-08T00:37:57.838Z",
   "collections": [
     {
       "name": "users",
@@ -29,21 +29,29 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate"]
+          "autodateTriggers": [
+            "onCreate"
+          ]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate", "onUpdate"]
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
         },
         {
           "name": "role",
           "type": "select",
           "required": false,
           "system": false,
-          "selectValues": ["gestor", "investidor"]
+          "selectValues": [
+            "gestor",
+            "investidor"
+          ]
         }
       ],
       "indexes": [
@@ -74,7 +82,10 @@
           "type": "select",
           "required": true,
           "system": false,
-          "selectValues": ["gestor", "investidor"]
+          "selectValues": [
+            "gestor",
+            "investidor"
+          ]
         },
         {
           "name": "name",
@@ -93,17 +104,24 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate"]
+          "autodateTriggers": [
+            "onCreate"
+          ]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate", "onUpdate"]
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
         }
       ],
-      "indexes": ["CREATE UNIQUE INDEX idx_profiles_user_id ON profiles (user_id)"]
+      "indexes": [
+        "CREATE UNIQUE INDEX idx_profiles_user_id ON profiles (user_id)"
+      ]
     },
     {
       "name": "insurers",
@@ -145,17 +163,24 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate"]
+          "autodateTriggers": [
+            "onCreate"
+          ]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate", "onUpdate"]
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
         }
       ],
-      "indexes": ["CREATE UNIQUE INDEX idx_insurers_name ON insurers (name)"]
+      "indexes": [
+        "CREATE UNIQUE INDEX idx_insurers_name ON insurers (name)"
+      ]
     },
     {
       "name": "investors",
@@ -204,17 +229,24 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate"]
+          "autodateTriggers": [
+            "onCreate"
+          ]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate", "onUpdate"]
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
         }
       ],
-      "indexes": ["CREATE INDEX idx_investors_user_id ON investors (user_id)"]
+      "indexes": [
+        "CREATE INDEX idx_investors_user_id ON investors (user_id)"
+      ]
     },
     {
       "name": "settings",
@@ -250,17 +282,24 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate"]
+          "autodateTriggers": [
+            "onCreate"
+          ]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate", "onUpdate"]
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
         }
       ],
-      "indexes": ["CREATE UNIQUE INDEX idx_settings_key ON settings (key)"]
+      "indexes": [
+        "CREATE UNIQUE INDEX idx_settings_key ON settings (key)"
+      ]
     },
     {
       "name": "folders",
@@ -365,14 +404,19 @@
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate"]
+          "autodateTriggers": [
+            "onCreate"
+          ]
         },
         {
           "name": "updated",
           "type": "autodate",
           "required": false,
           "system": false,
-          "autodateTriggers": ["onCreate", "onUpdate"]
+          "autodateTriggers": [
+            "onCreate",
+            "onUpdate"
+          ]
         },
         {
           "name": "owner_name",
@@ -403,7 +447,13 @@
           "type": "select",
           "required": false,
           "system": false,
-          "selectValues": ["à repassar", "garantido", "recebido", "em análise", "pgto agendado"]
+          "selectValues": [
+            "à repassar",
+            "garantido",
+            "recebido",
+            "em análise",
+            "pgto agendado"
+          ]
         }
       ],
       "indexes": [
